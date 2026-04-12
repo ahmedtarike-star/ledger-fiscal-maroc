@@ -68,6 +68,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 
+// --- AI Initialization ---
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
 // --- Types ---
 
 interface Document {
@@ -705,21 +708,15 @@ const AINewsView = () => {
           <CardContent>
             <p className="text-xs text-slate-500">Découvrez comment cette avancée technologique transforme le paysage fiscal marocain en 2026.</p>
           </CardContent>
-          <CardFooter className="bg-slate-50 border-t">
-            <a 
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full"
+          <CardFooter className="bg-slate-50 border-t p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full text-blue-600 hover:text-blue-700 gap-2 h-10 rounded-none"
+              render={<a href={item.url} target="_blank" rel="noopener noreferrer" />}
             >
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-blue-600 hover:text-blue-700 gap-2"
-              >
-                Lire l'analyse <ChevronRight className="w-4 h-4" />
-              </Button>
-            </a>
+              Lire l'analyse <ChevronRight className="w-4 h-4" />
+            </Button>
           </CardFooter>
         </Card>
       ))}
@@ -982,8 +979,6 @@ const GenerateArticleDialog = () => {
   const [generatedArticle, setGeneratedArticle] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   const handleGenerate = async () => {
     if (!topic) return;
@@ -1250,7 +1245,6 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
     try {
       const prompt = `En tant qu'expert fiscal marocain, génère 5 recommandations stratégiques pour une entreprise dans le secteur "${analysisData.sector}" avec un chiffre d'affaires de ${analysisData.turnover} DH et ${analysisData.employees} employés pour l'année 2026. Réponds uniquement avec un tableau JSON d'objets ayant les propriétés: title, description, type (Optimisation, Conformité, Économie, Alerte), priority (Critique, Haute, Moyenne, Basse).`;
       
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
@@ -1734,8 +1728,6 @@ export default function App() {
   const [summary, setSummary] = useState<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
   const handleSummarize = async (doc: Document) => {
     setSelectedDoc(doc);
     setIsSummarizing(true);
@@ -1829,42 +1821,44 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 px-3 py-4 overflow-y-auto">
-            <SectionTitle>Navigation</SectionTitle>
-            <div className="space-y-1">
-              <SidebarItem icon={LayoutDashboard} label="Tableau de bord" id="dashboard" />
-              <SidebarItem icon={Users} label="Communauté" id="community" badge="Live" color="bg-green-500 text-white" />
-              <SidebarItem icon={Newspaper} label="Revue de presse" id="news" badge="Nouveau" color="bg-red-500 text-white" />
-              <SidebarItem icon={Zap} label="Actualités IA" id="ai-news" badge={8} color="bg-blue-600 text-white" />
-              <SidebarItem icon={Lightbulb} label="Recommandations" id="recommendations" badge="IA" color="bg-yellow-500 text-white" />
-              <SidebarItem icon={Bot} label="Assistant fiscal" id="assistant" />
-            </div>
+          <div className="flex-1 px-3 py-4 overflow-hidden">
+            <ScrollArea className="h-full pr-3">
+              <SectionTitle>Navigation</SectionTitle>
+              <div className="space-y-1">
+                <SidebarItem icon={LayoutDashboard} label="Tableau de bord" id="dashboard" />
+                <SidebarItem icon={Users} label="Communauté" id="community" badge="Live" color="bg-green-500 text-white" />
+                <SidebarItem icon={Newspaper} label="Revue de presse" id="news" badge="Nouveau" color="bg-red-500 text-white" />
+                <SidebarItem icon={Zap} label="Actualités IA" id="ai-news" badge={8} color="bg-blue-600 text-white" />
+                <SidebarItem icon={Lightbulb} label="Recommandations" id="recommendations" badge="IA" color="bg-yellow-500 text-white" />
+                <SidebarItem icon={Bot} label="Assistant fiscal" id="assistant" />
+              </div>
 
-            <SectionTitle>Bibliothèque CGI</SectionTitle>
-            <div className="space-y-1">
-              <SidebarItem icon={Library} label="CGI 2010-2026" id="cgi" badge={156} />
-              <SidebarItem icon={FileText} label="Circulaires DGI" id="circulaires" badge={452} />
-              <SidebarItem icon={FileCode} label="Bulletins Officiels" id="bulletins" badge={89} />
-              <SidebarItem icon={Scale} label="Jurisprudence" id="jurisprudence" badge={234} />
-            </div>
+              <SectionTitle>Bibliothèque CGI</SectionTitle>
+              <div className="space-y-1">
+                <SidebarItem icon={Library} label="CGI 2010-2026" id="cgi" badge={156} />
+                <SidebarItem icon={FileText} label="Circulaires DGI" id="circulaires" badge={452} />
+                <SidebarItem icon={FileCode} label="Bulletins Officiels" id="bulletins" badge={89} />
+                <SidebarItem icon={Scale} label="Jurisprudence" id="jurisprudence" badge={234} />
+              </div>
 
-            <SectionTitle>Outils Fiscaux</SectionTitle>
-            <div className="space-y-1">
-              <SidebarItem icon={Calculator} label="Simulateur IS" id="is" />
-              <SidebarItem icon={Calculator} label="Simulateur IR" id="ir" />
-              <SidebarItem icon={Calculator} label="Calculateur TVA" id="tva" />
-              <SidebarItem icon={Calendar} label="Calendrier fiscal" id="calendar" />
-            </div>
+              <SectionTitle>Outils Fiscaux</SectionTitle>
+              <div className="space-y-1">
+                <SidebarItem icon={Calculator} label="Simulateur IS" id="is" />
+                <SidebarItem icon={Calculator} label="Simulateur IR" id="ir" />
+                <SidebarItem icon={Calculator} label="Calculateur TVA" id="tva" />
+                <SidebarItem icon={Calendar} label="Calendrier fiscal" id="calendar" />
+              </div>
 
-            {isAdmin && (
-              <>
-                <SectionTitle>SEO & Monétisation</SectionTitle>
-                <div className="space-y-1">
-                  <SidebarItem icon={TrendingUp} label="Analyse SEO" id="seo" badge={90} color="bg-green-500 text-white" />
-                  <SidebarItem icon={Globe} label="AdSense" id="adsense" />
-                </div>
-              </>
-            )}
+              {isAdmin && (
+                <>
+                  <SectionTitle>SEO & Monétisation</SectionTitle>
+                  <div className="space-y-1">
+                    <SidebarItem icon={TrendingUp} label="Analyse SEO" id="seo" badge={90} color="bg-green-500 text-white" />
+                    <SidebarItem icon={Globe} label="AdSense" id="adsense" />
+                  </div>
+                </>
+              )}
+            </ScrollArea>
           </div>
 
           {isAdmin && (
@@ -1915,7 +1909,7 @@ export default function App() {
                       <User className="w-5 h-5 text-slate-500" />
                     </div>
                     <div className="text-left hidden sm:block">
-                      <p className="text-xs font-bold text-slate-900 leading-none">{isAdmin ? 'Admin' : 'Utilisateur'}</p>
+                      <p className="text-xs font-bold text-slate-900 leading-none">{isAdmin ? 'Admin' : 'Visiteur'}</p>
                       <p className="text-[10px] text-slate-500 mt-1">{isAdmin ? 'Accès Total' : 'Accès Public'}</p>
                     </div>
                   </Button>
