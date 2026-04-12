@@ -1327,7 +1327,21 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setSelectedRec(null)}>Fermer</Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 gap-2"
+                  onClick={() => {
+                    const content = `RAPPORT DE RECOMMANDATION FISCALE\n\nTitre: ${selectedRec.title}\nType: ${selectedRec.type}\nPriorité: ${selectedRec.priority}\n\nDescription:\n${selectedRec.description}\n\nPlan d'action:\n1. Vérifier l'éligibilité selon les nouveaux articles du CGI 2026.\n2. Préparer les justificatifs comptables nécessaires.\n3. Consulter un expert pour la validation finale.\n4. Mettre à jour les paramètres dans votre logiciel de gestion.\n\nDocument généré par Ledger Fiscal Maroc.`;
+                    const blob = new Blob([content], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Rapport_${selectedRec.title.replace(/\s+/g, '_')}.txt`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
                   <Download className="w-4 h-4" />
                   Télécharger le rapport
                 </Button>
@@ -1583,7 +1597,7 @@ export default function App() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1 px-3 py-4">
+          <div className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
             <SectionTitle>Navigation</SectionTitle>
             <div className="space-y-1">
               <SidebarItem icon={LayoutDashboard} label="Tableau de bord" id="dashboard" />
@@ -1615,7 +1629,7 @@ export default function App() {
               <SidebarItem icon={TrendingUp} label="Analyse SEO" id="seo" badge={90} color="bg-green-500 text-white" />
               <SidebarItem icon={Globe} label="AdSense" id="adsense" />
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="p-4 border-t border-slate-100">
             <GenerateArticleDialog />
@@ -1664,7 +1678,7 @@ export default function App() {
           </header>
 
           {/* Content Area */}
-          <main className={`flex-1 p-8 ${activeTab === 'assistant' ? 'h-full overflow-hidden' : 'overflow-auto'}`}>
+          <main className={`flex-1 ${activeTab === 'assistant' ? 'p-4 md:p-8' : 'p-8'} ${activeTab === 'assistant' ? 'h-[calc(100vh-3.5rem)] overflow-hidden' : 'overflow-auto'}`}>
             <AnimatePresence mode="wait">
               {activeTab === 'dashboard' ? (
                 <motion.div
@@ -1781,12 +1795,16 @@ export default function App() {
                                     size="sm" 
                                     className="h-8 gap-2 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                                     onClick={() => {
+                                      const content = `Document: ${doc.title}\nType: ${doc.type}\nDescription: ${doc.description}\n\nCeci est un document généré par Ledger Fiscal Maroc.`;
+                                      const blob = new Blob([content], { type: 'text/plain' });
+                                      const url = window.URL.createObjectURL(blob);
                                       const link = document.createElement('a');
-                                      link.href = '#';
-                                      link.download = `${doc.title}.pdf`;
+                                      link.href = url;
+                                      link.download = `${doc.title.replace(/\s+/g, '_')}.txt`;
                                       document.body.appendChild(link);
                                       link.click();
                                       document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(url);
                                     }}
                                   >
                                     <Download className="w-3.5 h-3.5" />
@@ -1934,7 +1952,7 @@ export default function App() {
                         <Button variant="ghost" size="icon" className="text-slate-400"><MoreHorizontal className="w-5 h-5" /></Button>
                       </div>
                     </CardHeader>
-                    <ScrollArea className="flex-1 p-6" ref={scrollRef}>
+                    <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200" ref={scrollRef}>
                       <div className="space-y-6">
                         {messages.map((msg, i) => (
                           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -1971,7 +1989,7 @@ export default function App() {
                           </div>
                         )}
                       </div>
-                    </ScrollArea>
+                    </div>
                     <CardFooter className="p-4 border-t bg-white">
                       <div className="flex w-full items-center gap-2">
                         <Input 
@@ -2064,7 +2082,21 @@ export default function App() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setSelectedDoc(null)}>Fermer</Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                  onClick={() => {
+                    const content = `RÉSUMÉ IA - DOCUMENT OFFICIEL\n\nDocument: ${selectedDoc?.title}\n\nRésumé:\n${summary}\n\nSource: Ledger Fiscal IA - CGI 2026`;
+                    const blob = new Blob([content], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Resume_IA_${selectedDoc?.title.replace(/\s+/g, '_')}.txt`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
                   <Download className="w-4 h-4" />
                   Télécharger le PDF complet
                 </Button>
