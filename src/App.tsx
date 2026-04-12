@@ -42,9 +42,11 @@ import {
   Eye,
   Users,
   Filter,
-  Briefcase
+  Briefcase,
+  Edit3
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import ReactMarkdown from 'react-markdown';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -978,6 +980,7 @@ const GenerateArticleDialog = () => {
   const [tone, setTone] = useState('Professionnel & Expert');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedArticle, setGeneratedArticle] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -986,6 +989,7 @@ const GenerateArticleDialog = () => {
     if (!topic) return;
     setIsGenerating(true);
     setGeneratedArticle('');
+    setIsEditing(false);
     try {
       const prompt = `En tant qu'expert fiscal marocain et rédacteur SEO, rédige un article de blog complet et structuré sur le sujet suivant : "${topic}". 
       Utilise les mots-clés : ${keywords}. 
@@ -1007,7 +1011,13 @@ const GenerateArticleDialog = () => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open) {
+        setGeneratedArticle('');
+        setIsEditing(false);
+      }
+    }}>
       <DialogTrigger
         render={
           <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-lg shadow-blue-100">
@@ -1016,93 +1026,194 @@ const GenerateArticleDialog = () => {
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Générer un article IA</DialogTitle>
-          <DialogDescription>
-            Utilisez l'IA pour rédiger un article fiscal optimisé SEO en quelques secondes.
-          </DialogDescription>
-        </DialogHeader>
-        
-        {!generatedArticle ? (
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sujet de l'article</label>
-              <Input 
-                placeholder="Ex: Les nouveautés de la LF 2026 sur l'IS" 
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Mots-clés cibles</label>
-              <Input 
-                placeholder="Ex: IS, Maroc, Fiscalité, 2026" 
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Ton de l'article</label>
-              <select 
-                className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-              >
-                <option>Professionnel & Expert</option>
-                <option>Informatif & Simple</option>
-                <option>Analytique & Critique</option>
-              </select>
+      <DialogContent className="sm:max-w-[850px] h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-6 pb-4 border-b bg-white">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Sparkles className="w-6 h-6 text-blue-600 animate-pulse" />
+                Générateur d'Articles SEO
+              </DialogTitle>
+              <DialogDescription>
+                Contenu fiscal expert optimisé pour le référencement au Maroc.
+              </DialogDescription>
             </div>
           </div>
-        ) : (
-          <ScrollArea className="flex-1 pr-4 py-4">
-            <div className="prose prose-slate max-w-none">
-              <div className="whitespace-pre-wrap text-sm text-slate-700 leading-relaxed bg-slate-50 p-6 rounded-xl border border-slate-100">
-                {generatedArticle}
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
+          {!generatedArticle ? (
+            <div className="p-8 space-y-8 max-w-2xl mx-auto w-full">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  Sujet de l'article
+                </label>
+                <Input 
+                  placeholder="Ex: Les nouveautés de la LF 2026 sur l'IS" 
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="h-12 border-slate-200 focus:ring-blue-500 bg-white text-base shadow-sm"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    Mots-clés cibles
+                  </label>
+                  <Input 
+                    placeholder="Ex: IS, Maroc, Fiscalité, 2026" 
+                    value={keywords}
+                    onChange={(e) => setKeywords(e.target.value)}
+                    className="h-12 border-slate-200 focus:ring-blue-500 bg-white shadow-sm"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-purple-500" />
+                    Ton de l'article
+                  </label>
+                  <select 
+                    className="w-full h-12 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value)}
+                  >
+                    <option>Professionnel & Expert</option>
+                    <option>Informatif & Simple</option>
+                    <option>Analytique & Critique</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Info className="w-5 h-5 text-blue-600 shrink-0" />
+                </div>
+                <p className="text-sm text-blue-700 leading-relaxed">
+                  L'IA va générer un article structuré avec des balises H2/H3 et une densité de mots-clés optimale pour le marché marocain.
+                </p>
               </div>
             </div>
-          </ScrollArea>
-        )}
-
-        <DialogFooter className="gap-2">
-          {generatedArticle ? (
-            <>
-              <Button variant="outline" onClick={() => setGeneratedArticle('')}>Recommencer</Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => {
-                  const blob = new Blob([generatedArticle], { type: 'text/plain' });
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `Article_${topic.replace(/\s+/g, '_')}.txt`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                }}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger
-              </Button>
-            </>
           ) : (
-            <>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>Annuler</Button>
+            <div className="flex-1 flex flex-col min-h-0 m-4 border rounded-2xl overflow-hidden bg-white shadow-sm">
+              <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-b">
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="bg-white text-slate-500 border-slate-200 font-bold px-3 py-1">
+                    {isEditing ? "MODE ÉDITION" : "APERÇU FINAL"}
+                  </Badge>
+                  {isGenerating && <span className="text-xs text-blue-600 animate-pulse font-medium">Mise à jour...</span>}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={`h-9 px-4 gap-2 font-bold transition-all ${isEditing ? 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                  onClick={() => setIsEditing(!isEditing)}
+                >
+                  {isEditing ? (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      Terminer l'édition
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="w-4 h-4" />
+                      Modifier l'article
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              <ScrollArea className="flex-1 h-full">
+                <div className="p-8 md:p-12 max-w-3xl mx-auto">
+                  {isEditing ? (
+                    <textarea
+                      className="w-full min-h-[600px] bg-slate-50 p-6 rounded-xl border-2 border-dashed border-slate-200 text-base text-slate-800 leading-relaxed outline-none resize-none font-mono focus:border-blue-300 transition-colors"
+                      value={generatedArticle}
+                      onChange={(e) => setGeneratedArticle(e.target.value)}
+                      placeholder="Modifiez votre article ici..."
+                    />
+                  ) : (
+                    <div className="prose prose-slate prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600">
+                      <ReactMarkdown>
+                        {generatedArticle}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="p-6 border-t bg-white gap-3">
+          {generatedArticle ? (
+            <div className="flex items-center justify-between w-full">
+              <Button variant="ghost" className="text-slate-500 hover:text-red-600" onClick={() => {
+                setGeneratedArticle('');
+                setIsEditing(false);
+              }}>
+                <X className="w-4 h-4 mr-2" />
+                Annuler et recommencer
+              </Button>
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline"
+                  className="border-slate-200"
+                  onClick={() => {
+                    const blob = new Blob([generatedArticle], { type: 'text/markdown' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Article_${topic.replace(/\s+/g, '_')}.md`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
+                  <FileCode className="w-4 h-4 mr-2" />
+                  Format Markdown
+                </Button>
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 px-8 h-11 font-bold"
+                  onClick={() => {
+                    const blob = new Blob([generatedArticle], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Article_${topic.replace(/\s+/g, '_')}.txt`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Télécharger l'article
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end w-full gap-3">
+              <Button variant="ghost" onClick={() => setIsOpen(false)}>Fermer</Button>
               <Button 
-                className="bg-blue-600 hover:bg-blue-700" 
+                className="bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 px-10 h-12 text-base font-bold" 
                 onClick={handleGenerate}
                 disabled={isGenerating || !topic}
               >
                 {isGenerating ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                    Génération...
+                    <span className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mr-3" />
+                    Rédaction de votre article...
                   </>
-                ) : "Lancer la génération"}
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Générer l'article maintenant
+                  </>
+                )}
               </Button>
-            </>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>
@@ -1811,39 +1922,59 @@ export default function App() {
                 } />
                 <DialogContent className="sm:max-w-[400px]">
                   <DialogHeader>
-                    <DialogTitle>Connexion Administrateur</DialogTitle>
+                    <DialogTitle>{isAdmin ? 'Session Administrateur' : 'Connexion Administrateur'}</DialogTitle>
                     <DialogDescription>
-                      Entrez le mot de passe pour accéder aux outils d'administration.
+                      {isAdmin ? 'Vous êtes connecté en tant qu\'administrateur.' : 'Entrez le mot de passe pour accéder aux outils d\'administration.'}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4">
-                    <Input 
-                      type="password" 
-                      placeholder="Mot de passe" 
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && adminPassword === 'admin123') {
-                          setIsAdmin(true);
-                          setIsAdminDialogOpen(false);
-                          setAdminPassword('');
-                        }
-                      }}
-                    />
+                    {isAdmin ? (
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-100 flex items-center gap-3">
+                        <ShieldCheck className="w-5 h-5 text-green-600" />
+                        <p className="text-sm text-green-700 font-medium">Accès privilégié activé</p>
+                      </div>
+                    ) : (
+                      <Input 
+                        type="password" 
+                        placeholder="Mot de passe" 
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && adminPassword === 'admin123') {
+                            setIsAdmin(true);
+                            setIsAdminDialogOpen(false);
+                            setAdminPassword('');
+                          }
+                        }}
+                      />
+                    )}
                   </div>
                   <DialogFooter>
-                    <Button 
-                      className="w-full bg-blue-600"
-                      onClick={() => {
-                        if (adminPassword === 'admin123') {
-                          setIsAdmin(true);
+                    {isAdmin ? (
+                      <Button 
+                        variant="destructive"
+                        className="w-full"
+                        onClick={() => {
+                          setIsAdmin(false);
                           setIsAdminDialogOpen(false);
-                          setAdminPassword('');
-                        }
-                      }}
-                    >
-                      Se connecter
-                    </Button>
+                        }}
+                      >
+                        Se déconnecter
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="w-full bg-blue-600"
+                        onClick={() => {
+                          if (adminPassword === 'admin123') {
+                            setIsAdmin(true);
+                            setIsAdminDialogOpen(false);
+                            setAdminPassword('');
+                          }
+                        }}
+                      >
+                        Se connecter
+                      </Button>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -1974,15 +2105,15 @@ export default function App() {
                                     <FileText className="w-3.5 h-3.5" />
                                     Résumé IA
                                   </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="h-8 gap-2 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                                    onClick={() => window.open(doc.url, '_blank')}
+                                  <a 
+                                    href={doc.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-slate-200 bg-background hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 h-8 px-3 gap-2"
                                   >
                                     <Download className="w-3.5 h-3.5" />
                                     Télécharger
-                                  </Button>
+                                  </a>
                                   {doc.hasAI && (
                                     <Tooltip>
                                       <TooltipTrigger
@@ -2125,13 +2256,13 @@ export default function App() {
                         <Button variant="ghost" size="icon" className="text-slate-400"><MoreHorizontal className="w-5 h-5" /></Button>
                       </div>
                     </CardHeader>
-                    <div className="flex-1 p-6 overflow-y-auto" ref={scrollRef}>
-                      <div className="space-y-6">
+                    <ScrollArea className="flex-1 h-full" ref={scrollRef}>
+                      <div className="p-6 space-y-6">
                         {messages.map((msg, i) => (
                           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`flex gap-3 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                                msg.role === 'user' ? 'bg-slate-900 text-white' : 'bg-blue-100 text-blue-600'
+                            <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+                                msg.role === 'user' ? 'bg-slate-900 text-white' : 'bg-blue-600 text-white'
                               }`}>
                                 {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                               </div>
@@ -2140,7 +2271,9 @@ export default function App() {
                                   ? 'bg-blue-600 text-white rounded-tr-none' 
                                   : 'bg-white text-slate-800 rounded-tl-none border border-slate-200'
                               }`}>
-                                {msg.content}
+                                <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:text-white">
+                                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2162,7 +2295,7 @@ export default function App() {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </ScrollArea>
                     <CardFooter className="p-4 border-t bg-white">
                       <div className="flex w-full items-center gap-2">
                         <Input 
@@ -2255,17 +2388,15 @@ export default function App() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setSelectedDoc(null)}>Fermer</Button>
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                  onClick={() => {
-                    if (selectedDoc?.url) {
-                      window.open(selectedDoc.url, '_blank');
-                    }
-                  }}
+                <a 
+                  href={selectedDoc?.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 gap-2"
                 >
                   <Download className="w-4 h-4" />
                   Télécharger le PDF complet
-                </Button>
+                </a>
               </DialogFooter>
             </DialogContent>
           </Dialog>
