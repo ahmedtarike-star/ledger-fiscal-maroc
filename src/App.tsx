@@ -973,8 +973,41 @@ const AdSenseView = () => {
 };
 
 const GenerateArticleDialog = () => {
+  const [topic, setTopic] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [tone, setTone] = useState('Professionnel & Expert');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedArticle, setGeneratedArticle] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+  const handleGenerate = async () => {
+    if (!topic) return;
+    setIsGenerating(true);
+    setGeneratedArticle('');
+    try {
+      const prompt = `En tant qu'expert fiscal marocain et rédacteur SEO, rédige un article de blog complet et structuré sur le sujet suivant : "${topic}". 
+      Utilise les mots-clés : ${keywords}. 
+      Le ton doit être : ${tone}. 
+      L'article doit inclure un titre accrocheur, une introduction, des sous-titres (H2, H3), et une conclusion. 
+      Optimise le contenu pour le SEO au Maroc pour l'année 2026.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      setGeneratedArticle(response.text || "Désolé, je n'ai pas pu générer l'article.");
+    } catch (error) {
+      console.error("Generation error:", error);
+      setGeneratedArticle("Désolé, une erreur est survenue lors de la génération de l'article.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger
         render={
           <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-lg shadow-blue-100">
@@ -983,35 +1016,95 @@ const GenerateArticleDialog = () => {
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Générer un article IA</DialogTitle>
           <DialogDescription>
             Utilisez l'IA pour rédiger un article fiscal optimisé SEO en quelques secondes.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Sujet de l'article</label>
-            <Input placeholder="Ex: Les nouveautés de la LF 2026 sur l'IS" />
+        
+        {!generatedArticle ? (
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sujet de l'article</label>
+              <Input 
+                placeholder="Ex: Les nouveautés de la LF 2026 sur l'IS" 
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mots-clés cibles</label>
+              <Input 
+                placeholder="Ex: IS, Maroc, Fiscalité, 2026" 
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Ton de l'article</label>
+              <select 
+                className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={tone}
+                onChange={(e) => setTone(e.target.value)}
+              >
+                <option>Professionnel & Expert</option>
+                <option>Informatif & Simple</option>
+                <option>Analytique & Critique</option>
+              </select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Mots-clés cibles</label>
-            <Input placeholder="Ex: IS, Maroc, Fiscalité, 2026" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Ton de l'article</label>
-            <select className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
-              <option>Professionnel & Expert</option>
-              <option>Informatif & Simple</option>
-              <option>Analytique & Critique</option>
-            </select>
-          </div>
-        </div>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline">Annuler</Button>
-          <Button className="bg-blue-600 hover:bg-blue-700">Lancer la génération</Button>
-        </div>
+        ) : (
+          <ScrollArea className="flex-1 pr-4 py-4">
+            <div className="prose prose-slate max-w-none">
+              <div className="whitespace-pre-wrap text-sm text-slate-700 leading-relaxed bg-slate-50 p-6 rounded-xl border border-slate-100">
+                {generatedArticle}
+              </div>
+            </div>
+          </ScrollArea>
+        )}
+
+        <DialogFooter className="gap-2">
+          {generatedArticle ? (
+            <>
+              <Button variant="outline" onClick={() => setGeneratedArticle('')}>Recommencer</Button>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  const blob = new Blob([generatedArticle], { type: 'text/plain' });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `Article_${topic.replace(/\s+/g, '_')}.txt`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setIsOpen(false)}>Annuler</Button>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700" 
+                onClick={handleGenerate}
+                disabled={isGenerating || !topic}
+              >
+                {isGenerating ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Génération...
+                  </>
+                ) : "Lancer la génération"}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -1517,6 +1610,9 @@ export default function App() {
   const [recommendationFilter, setRecommendationFilter] = useState('Tous');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Bonjour ! Je suis votre assistant fiscal IA. Comment puis-je vous aider dans vos recherches ou calculs fiscaux aujourd'hui ?" }
   ]);
@@ -1649,16 +1745,22 @@ export default function App() {
               <SidebarItem icon={Calendar} label="Calendrier fiscal" id="calendar" />
             </div>
 
-            <SectionTitle>SEO & Monétisation</SectionTitle>
-            <div className="space-y-1">
-              <SidebarItem icon={TrendingUp} label="Analyse SEO" id="seo" badge={90} color="bg-green-500 text-white" />
-              <SidebarItem icon={Globe} label="AdSense" id="adsense" />
-            </div>
+            {isAdmin && (
+              <>
+                <SectionTitle>SEO & Monétisation</SectionTitle>
+                <div className="space-y-1">
+                  <SidebarItem icon={TrendingUp} label="Analyse SEO" id="seo" badge={90} color="bg-green-500 text-white" />
+                  <SidebarItem icon={Globe} label="AdSense" id="adsense" />
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="p-4 border-t border-slate-100">
-            <GenerateArticleDialog />
-          </div>
+          {isAdmin && (
+            <div className="p-4 border-t border-slate-100">
+              <GenerateArticleDialog />
+            </div>
+          )}
         </aside>
 
         {/* Main Content */}
@@ -1690,15 +1792,72 @@ export default function App() {
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full" />
               </Button>
-              <Button variant="ghost" size="sm" className="gap-2 px-2">
-                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                  <User className="w-5 h-5 text-slate-500" />
-                </div>
-                <div className="text-left hidden sm:block">
-                  <p className="text-xs font-bold text-slate-900 leading-none">Utilisateur</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Accès Public</p>
-                </div>
-              </Button>
+              <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+                <DialogTrigger render={
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-2 px-2"
+                    onClick={() => !isAdmin && setIsAdminDialogOpen(true)}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                      <User className="w-5 h-5 text-slate-500" />
+                    </div>
+                    <div className="text-left hidden sm:block">
+                      <p className="text-xs font-bold text-slate-900 leading-none">{isAdmin ? 'Admin' : 'Utilisateur'}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">{isAdmin ? 'Accès Total' : 'Accès Public'}</p>
+                    </div>
+                  </Button>
+                } />
+                <DialogContent className="sm:max-w-[400px]">
+                  <DialogHeader>
+                    <DialogTitle>Connexion Administrateur</DialogTitle>
+                    <DialogDescription>
+                      Entrez le mot de passe pour accéder aux outils d'administration.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Input 
+                      type="password" 
+                      placeholder="Mot de passe" 
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && adminPassword === 'admin123') {
+                          setIsAdmin(true);
+                          setIsAdminDialogOpen(false);
+                          setAdminPassword('');
+                        }
+                      }}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      className="w-full bg-blue-600"
+                      onClick={() => {
+                        if (adminPassword === 'admin123') {
+                          setIsAdmin(true);
+                          setIsAdminDialogOpen(false);
+                          setAdminPassword('');
+                        }
+                      }}
+                    >
+                      Se connecter
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {isAdmin && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => setIsAdmin(false)}
+                >
+                  Déconnexion
+                </Button>
+              )}
             </div>
           </header>
 
@@ -1874,7 +2033,7 @@ export default function App() {
                   </div>
                   <AINewsView />
                 </motion.div>
-              ) : activeTab === 'seo' ? (
+              ) : activeTab === 'seo' && isAdmin ? (
                 <motion.div
                   key="seo"
                   initial={{ opacity: 0, y: 10 }}
@@ -1888,7 +2047,7 @@ export default function App() {
                   </div>
                   <SEOView />
                 </motion.div>
-              ) : activeTab === 'adsense' ? (
+              ) : activeTab === 'adsense' && isAdmin ? (
                 <motion.div
                   key="adsense"
                   initial={{ opacity: 0, y: 10 }}
