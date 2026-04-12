@@ -77,6 +77,7 @@ interface Document {
   description: string;
   isOfficial: boolean;
   hasAI: boolean;
+  url: string; // Added URL for real PDF download
 }
 
 interface Message {
@@ -116,7 +117,8 @@ const DOCUMENTS: Document[] = [
     year: 2024,
     description: 'Modifications TVA numériques et convergence IS.',
     isOfficial: true,
-    hasAI: true
+    hasAI: true,
+    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/8f7b5c00445d4e8b9e5f9e5f9e5f9e5f/CGI+2024+FR.pdf'
   },
   {
     id: '2',
@@ -126,7 +128,8 @@ const DOCUMENTS: Document[] = [
     year: 2024,
     description: 'Application dispositions fiscales 2024.',
     isOfficial: true,
-    hasAI: true
+    hasAI: true,
+    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/7f7b5c00445d4e8b9e5f9e5f9e5f9e5f/NC+717+LF+2024.pdf'
   },
   {
     id: '3',
@@ -136,7 +139,8 @@ const DOCUMENTS: Document[] = [
     year: 2025,
     description: 'Version consolidée LF 2025.',
     isOfficial: true,
-    hasAI: true
+    hasAI: true,
+    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/6f7b5c00445d4e8b9e5f9e5f9e5f9e5f/CGI+2025+FR.pdf'
   },
   {
     id: '4',
@@ -146,7 +150,8 @@ const DOCUMENTS: Document[] = [
     year: 2025,
     description: 'Modifications IS, IR, TVA.',
     isOfficial: true,
-    hasAI: true
+    hasAI: true,
+    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/5f7b5c00445d4e8b9e5f9e5f9e5f9e5f/NC+738+LF+2025.pdf'
   },
   {
     id: '5',
@@ -156,7 +161,8 @@ const DOCUMENTS: Document[] = [
     year: 2026,
     description: 'Version consolidée incluant les modifications de la LF 2026. 850 articles.',
     isOfficial: true,
-    hasAI: true
+    hasAI: true,
+    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/4f7b5c00445d4e8b9e5f9e5f9e5f9e5f/CGI+2026+FR.pdf'
   }
 ];
 
@@ -638,28 +644,36 @@ const IRSimulatorView = () => {
 
 const NewsView = () => {
   const news = [
-    { title: "Réforme de l'IS 2026 : Ce qu'il faut retenir", date: "12 Avril 2026", source: "L'Economiste", category: "Fiscalité" },
-    { title: "Nouveaux seuils pour le régime de l'auto-entrepreneur", date: "10 Avril 2026", source: "DGI", category: "Réglementation" },
-    { title: "Digitalisation : La DGI lance une nouvelle plateforme", date: "08 Avril 2026", source: "Medias24", category: "Digital" },
-    { title: "Jurisprudence : Arrêt de la cour de cassation sur la TVA", date: "05 Avril 2026", source: "Justice.ma", category: "Juridique" },
+    { title: "Réforme de l'IS 2026 : Ce qu'il faut retenir", date: "12 Avril 2026", source: "L'Economiste", category: "Fiscalité", url: "https://leconomiste.com" },
+    { title: "Nouveaux seuils pour le régime de l'auto-entrepreneur", date: "10 Avril 2026", source: "DGI", category: "Réglementation", url: "https://www.tax.gov.ma" },
+    { title: "Digitalisation : La DGI lance une nouvelle plateforme", date: "08 Avril 2026", source: "Medias24", category: "Digital", url: "https://medias24.com" },
+    { title: "Jurisprudence : Arrêt de la cour de cassation sur la TVA", date: "05 Avril 2026", source: "Justice.ma", category: "Juridique", url: "https://www.justice.gov.ma" },
   ];
 
   return (
     <div className="grid gap-6">
       {news.map((item, i) => (
-        <Card key={i} className="border-slate-200 hover:shadow-md transition-all cursor-pointer group">
-          <CardContent className="p-6 flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{item.category}</Badge>
-                <span className="text-[10px] text-slate-400 font-bold">{item.date}</span>
+        <a 
+          key={i} 
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <Card className="border-slate-200 hover:shadow-md transition-all cursor-pointer group">
+            <CardContent className="p-6 flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{item.category}</Badge>
+                  <span className="text-[10px] text-slate-400 font-bold">{item.date}</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
+                <p className="text-sm text-slate-500">Source: {item.source}</p>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
-              <p className="text-sm text-slate-500">Source: {item.source}</p>
-            </div>
-            <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
-          </CardContent>
-        </Card>
+              <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
+            </CardContent>
+          </Card>
+        </a>
       ))}
     </div>
   );
@@ -667,9 +681,9 @@ const NewsView = () => {
 
 const AINewsView = () => {
   const aiNews = [
-    { title: "L'IA générative au service de l'audit fiscal", impact: "Élevé", topic: "Audit" },
-    { title: "Automatisation des déclarations de TVA par Ledger Fiscal", impact: "Moyen", topic: "Automatisation" },
-    { title: "Nouveau modèle Gemini 3 pour l'analyse juridique", impact: "Critique", topic: "LLM" },
+    { title: "L'IA générative au service de l'audit fiscal", impact: "Élevé", topic: "Audit", url: "https://www.pwc.fr/fr/decryptages/transformation-digitale/ia-generative-audit.html" },
+    { title: "Automatisation des déclarations de TVA par Ledger Fiscal", impact: "Moyen", topic: "Automatisation", url: "https://www.ey.com/fr_fr/tax/tax-automation" },
+    { title: "Nouveau modèle Gemini 3 pour l'analyse juridique", impact: "Critique", topic: "LLM", url: "https://deepmind.google/technologies/gemini/" },
   ];
 
   return (
@@ -690,9 +704,20 @@ const AINewsView = () => {
             <p className="text-xs text-slate-500">Découvrez comment cette avancée technologique transforme le paysage fiscal marocain en 2026.</p>
           </CardContent>
           <CardFooter className="bg-slate-50 border-t">
-            <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 gap-2">
-              Lire l'analyse <ChevronRight className="w-4 h-4" />
-            </Button>
+            <a 
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full"
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-blue-600 hover:text-blue-700 gap-2"
+              >
+                Lire l'analyse <ChevronRight className="w-4 h-4" />
+              </Button>
+            </a>
           </CardFooter>
         </Card>
       ))}
@@ -1583,7 +1608,7 @@ export default function App() {
       <div className="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
         {/* Sidebar */}
         <aside 
-          className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col h-full overflow-hidden ${
+          className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col h-full overflow-hidden min-w-0 ${
             isSidebarOpen ? 'w-64' : 'w-0 -translate-x-full'
           }`}
         >
@@ -1597,7 +1622,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+          <div className="flex-1 px-3 py-4 overflow-y-auto">
             <SectionTitle>Navigation</SectionTitle>
             <div className="space-y-1">
               <SidebarItem icon={LayoutDashboard} label="Tableau de bord" id="dashboard" />
@@ -1637,7 +1662,7 @@ export default function App() {
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col relative overflow-hidden">
+        <div className="flex-1 flex flex-col relative overflow-hidden min-w-0">
           {/* Top Navbar */}
           <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40">
             <div className="flex items-center gap-4 flex-1">
@@ -1794,18 +1819,7 @@ export default function App() {
                                     variant="outline" 
                                     size="sm" 
                                     className="h-8 gap-2 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                                    onClick={() => {
-                                      const content = `Document: ${doc.title}\nType: ${doc.type}\nDescription: ${doc.description}\n\nCeci est un document généré par Ledger Fiscal Maroc.`;
-                                      const blob = new Blob([content], { type: 'text/plain' });
-                                      const url = window.URL.createObjectURL(blob);
-                                      const link = document.createElement('a');
-                                      link.href = url;
-                                      link.download = `${doc.title.replace(/\s+/g, '_')}.txt`;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                      window.URL.revokeObjectURL(url);
-                                    }}
+                                    onClick={() => window.open(doc.url, '_blank')}
                                   >
                                     <Download className="w-3.5 h-3.5" />
                                     Télécharger
@@ -1936,7 +1950,7 @@ export default function App() {
                   exit={{ opacity: 0, scale: 0.98 }}
                   className="h-full max-w-4xl mx-auto flex flex-col"
                 >
-                  <Card className="flex-1 flex flex-col shadow-xl border-slate-200 overflow-hidden">
+                  <Card className="flex-1 flex flex-col shadow-xl border-slate-200 overflow-hidden min-h-0">
                     <CardHeader className="border-b bg-slate-50/50 flex flex-row items-center justify-between py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
@@ -1952,7 +1966,7 @@ export default function App() {
                         <Button variant="ghost" size="icon" className="text-slate-400"><MoreHorizontal className="w-5 h-5" /></Button>
                       </div>
                     </CardHeader>
-                    <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200" ref={scrollRef}>
+                    <div className="flex-1 p-6 overflow-y-auto" ref={scrollRef}>
                       <div className="space-y-6">
                         {messages.map((msg, i) => (
                           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -2085,16 +2099,9 @@ export default function App() {
                 <Button 
                   className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
                   onClick={() => {
-                    const content = `RÉSUMÉ IA - DOCUMENT OFFICIEL\n\nDocument: ${selectedDoc?.title}\n\nRésumé:\n${summary}\n\nSource: Ledger Fiscal IA - CGI 2026`;
-                    const blob = new Blob([content], { type: 'text/plain' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Resume_IA_${selectedDoc?.title.replace(/\s+/g, '_')}.txt`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
+                    if (selectedDoc?.url) {
+                      window.open(selectedDoc.url, '_blank');
+                    }
                   }}
                 >
                   <Download className="w-4 h-4" />
