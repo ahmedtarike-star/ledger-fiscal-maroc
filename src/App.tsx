@@ -1569,7 +1569,7 @@ export default function App() {
       <div className="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
         {/* Sidebar */}
         <aside 
-          className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col ${
+          className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col h-full overflow-hidden ${
             isSidebarOpen ? 'w-64' : 'w-0 -translate-x-full'
           }`}
         >
@@ -1656,15 +1656,15 @@ export default function App() {
                   <User className="w-5 h-5 text-slate-500" />
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-xs font-bold text-slate-900 leading-none">Ahmed Tarik</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Administrateur</p>
+                  <p className="text-xs font-bold text-slate-900 leading-none">Utilisateur</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Accès Public</p>
                 </div>
               </Button>
             </div>
           </header>
 
           {/* Content Area */}
-          <main className="flex-1 overflow-auto p-8">
+          <main className={`flex-1 p-8 ${activeTab === 'assistant' ? 'h-full overflow-hidden' : 'overflow-auto'}`}>
             <AnimatePresence mode="wait">
               {activeTab === 'dashboard' ? (
                 <motion.div
@@ -1776,7 +1776,19 @@ export default function App() {
                                     <FileText className="w-3.5 h-3.5" />
                                     Résumé IA
                                   </Button>
-                                  <Button variant="outline" size="sm" className="h-8 gap-2 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-8 gap-2 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                                    onClick={() => {
+                                      const link = document.createElement('a');
+                                      link.href = '#';
+                                      link.download = `${doc.title}.pdf`;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                    }}
+                                  >
                                     <Download className="w-3.5 h-3.5" />
                                     Télécharger
                                   </Button>
