@@ -1821,7 +1821,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 px-3 py-4 overflow-hidden">
+          <div className="flex-1 px-3 py-4 overflow-hidden min-h-0">
             <ScrollArea className="h-full pr-3">
               <SectionTitle>Navigation</SectionTitle>
               <div className="space-y-1">
