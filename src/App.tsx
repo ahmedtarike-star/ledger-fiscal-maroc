@@ -649,10 +649,11 @@ const IRSimulatorView = () => {
 
 const NewsView = () => {
   const news = [
-    { title: "Réforme de l'IS 2026 : Ce qu'il faut retenir", date: "12 Avril 2026", source: "L'Economiste", category: "Fiscalité", url: "https://leconomiste.com" },
-    { title: "Nouveaux seuils pour le régime de l'auto-entrepreneur", date: "10 Avril 2026", source: "DGI", category: "Réglementation", url: "https://www.tax.gov.ma" },
-    { title: "Digitalisation : La DGI lance une nouvelle plateforme", date: "08 Avril 2026", source: "Medias24", category: "Digital", url: "https://medias24.com" },
-    { title: "Jurisprudence : Arrêt de la cour de cassation sur la TVA", date: "05 Avril 2026", source: "Justice.ma", category: "Juridique", url: "https://www.justice.gov.ma" },
+    { title: "Réforme de l'IS 2026 : Ce qu'il faut retenir", date: "12 Avril 2026", source: "L'Economiste", category: "Fiscalité", url: "https://leconomiste.com/categorie/economie" },
+    { title: "Nouveaux seuils pour le régime de l'auto-entrepreneur", date: "10 Avril 2026", source: "DGI", category: "Réglementation", url: "https://www.tax.gov.ma/wps/portal/DGI/Actualites" },
+    { title: "Digitalisation : La DGI lance une nouvelle plateforme", date: "08 Avril 2026", source: "Medias24", category: "Digital", url: "https://medias24.com/economie/" },
+    { title: "Jurisprudence : Arrêt de la cour de cassation sur la TVA", date: "05 Avril 2026", source: "Justice.ma", category: "Juridique", url: "https://www.justice.gov.ma/fr/actualites/" },
+    { title: "PLF 2026 : Les grandes orientations budgétaires", date: "01 Avril 2026", source: "Finances.gov.ma", category: "Budget", url: "https://www.finances.gov.ma/fr/Pages/actualites.aspx" },
   ];
 
   return (
@@ -709,14 +710,15 @@ const AINewsView = () => {
             <p className="text-xs text-slate-500">Découvrez comment cette avancée technologique transforme le paysage fiscal marocain en 2026.</p>
           </CardContent>
           <CardFooter className="bg-slate-50 border-t p-0">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full text-blue-600 hover:text-blue-700 gap-2 h-10 rounded-none"
-              render={<a href={item.url} target="_blank" rel="noopener noreferrer" />}
-            >
-              Lire l'analyse <ChevronRight className="w-4 h-4" />
-            </Button>
+            <a href={item.url} target="_blank" rel="noopener noreferrer" className="w-full">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-blue-600 hover:text-blue-700 gap-2 h-10 rounded-none"
+              >
+                Lire l'analyse <ChevronRight className="w-4 h-4" />
+              </Button>
+            </a>
           </CardFooter>
         </Card>
       ))}
@@ -1058,7 +1060,81 @@ const AdSenseView = () => {
   );
 };
 
-const GenerateArticleDialog = () => {
+interface PublishedArticle {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  author: string;
+  topic: string;
+}
+
+const PublishedArticlesView = ({ articles }: { articles: PublishedArticle[] }) => {
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Articles Publiés</h2>
+          <p className="text-sm text-slate-500">Contenu généré par IA et validé par nos experts.</p>
+        </div>
+      </div>
+      
+      {articles.length === 0 ? (
+        <Card className="border-slate-200 p-12 text-center">
+          <div className="max-w-xs mx-auto space-y-4">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+              <FileText className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Aucun article publié</h3>
+            <p className="text-sm text-slate-500">Utilisez le générateur d'articles pour créer et publier votre premier contenu fiscal.</p>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid gap-6">
+          {articles.map((article) => (
+            <Card key={article.id} className="border-slate-200 overflow-hidden hover:shadow-lg transition-all">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className="bg-blue-50 text-blue-700 border-none">{article.topic}</Badge>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">{article.date}</span>
+                </div>
+                <CardTitle className="text-xl text-slate-900">{article.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-slate prose-sm max-w-none line-clamp-3 text-slate-600">
+                  <ReactMarkdown>{article.content}</ReactMarkdown>
+                </div>
+              </CardContent>
+              <CardFooter className="bg-slate-50 border-t flex justify-between items-center py-3">
+                <div className="flex items-center gap-2">
+                  <User className="w-3 h-3 text-slate-400" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{article.author}</span>
+                </div>
+                <Dialog>
+                  <DialogTrigger render={<Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold" />}>
+                    Lire l'article complet
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0">
+                    <DialogHeader className="p-6 border-b">
+                      <DialogTitle>{article.title}</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="flex-1 p-8">
+                      <div className="prose prose-slate prose-lg max-w-none">
+                        <ReactMarkdown>{article.content}</ReactMarkdown>
+                      </div>
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedArticle) => void }) => {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [tone, setTone] = useState('Professionnel & Expert');
@@ -1272,6 +1348,24 @@ const GenerateArticleDialog = () => {
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Télécharger l'article
+                </Button>
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 shadow-xl shadow-green-100 px-8 h-11 font-bold"
+                  onClick={() => {
+                    onPublish({
+                      id: Date.now().toString(),
+                      title: topic,
+                      content: generatedArticle,
+                      date: new Date().toLocaleDateString('fr-FR'),
+                      author: "Expert Ledger Fiscal",
+                      topic: "Analyse Fiscale"
+                    });
+                    setIsOpen(false);
+                    setGeneratedArticle('');
+                  }}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Publier sur le site
                 </Button>
               </div>
             </div>
@@ -1799,6 +1893,7 @@ const TVACalculatorView = () => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [publishedArticles, setPublishedArticles] = useState<PublishedArticle[]>([]);
   const [recommendationFilter, setRecommendationFilter] = useState('Tous');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1914,6 +2009,7 @@ export default function App() {
               <div className="space-y-1">
                 <SidebarItem icon={LayoutDashboard} label="Tableau de bord" id="dashboard" />
                 <SidebarItem icon={Users} label="Communauté" id="community" badge="Live" color="bg-green-500 text-white" />
+                <SidebarItem icon={FileText} label="Articles Publiés" id="articles" badge={publishedArticles.length} color="bg-blue-100 text-blue-700" />
                 <SidebarItem icon={Newspaper} label="Revue de presse" id="news" badge="Nouveau" color="bg-red-500 text-white" />
                 <SidebarItem icon={Zap} label="Actualités IA" id="ai-news" badge={8} color="bg-blue-600 text-white" />
                 <SidebarItem icon={Lightbulb} label="Recommandations" id="recommendations" badge="IA" color="bg-yellow-500 text-white" />
@@ -1950,7 +2046,10 @@ export default function App() {
 
           {isAdmin && (
             <div className="p-4 border-t border-slate-100">
-              <GenerateArticleDialog />
+              <GenerateArticleDialog onPublish={(article) => {
+                setPublishedArticles(prev => [article, ...prev]);
+                setActiveTab('articles');
+              }} />
             </div>
           )}
         </aside>
@@ -2092,6 +2191,16 @@ export default function App() {
                     setActiveTab(tab);
                     if (filter) setRecommendationFilter(filter);
                   }} />
+                </motion.div>
+              ) : activeTab === 'articles' ? (
+                <motion.div
+                  key="articles"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="max-w-6xl mx-auto"
+                >
+                  <PublishedArticlesView articles={publishedArticles} />
                 </motion.div>
               ) : activeTab === 'recommendations' ? (
                 <motion.div
