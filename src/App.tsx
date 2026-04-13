@@ -123,7 +123,7 @@ const DOCUMENTS: Document[] = [
     description: 'Modifications TVA numériques et convergence IS.',
     isOfficial: true,
     hasAI: true,
-    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/8f7b5c00445d4e8b9e5f9e5f9e5f9e5f/CGI+2024+FR.pdf'
+    url: '/documents/CGI_2024_FR.pdf'
   },
   {
     id: '2',
@@ -134,7 +134,7 @@ const DOCUMENTS: Document[] = [
     description: 'Application dispositions fiscales 2024.',
     isOfficial: true,
     hasAI: true,
-    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/7f7b5c00445d4e8b9e5f9e5f9e5f9e5f/NC+717+LF+2024.pdf'
+    url: '/documents/NC_717_LF_2024.pdf'
   },
   {
     id: '3',
@@ -145,7 +145,7 @@ const DOCUMENTS: Document[] = [
     description: 'Version consolidée LF 2025.',
     isOfficial: true,
     hasAI: true,
-    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/6f7b5c00445d4e8b9e5f9e5f9e5f9e5f/CGI+2025+FR.pdf'
+    url: '/documents/CGI_2025_FR.pdf'
   },
   {
     id: '4',
@@ -156,7 +156,7 @@ const DOCUMENTS: Document[] = [
     description: 'Modifications IS, IR, TVA.',
     isOfficial: true,
     hasAI: true,
-    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/5f7b5c00445d4e8b9e5f9e5f9e5f9e5f/NC+738+LF+2025.pdf'
+    url: '/documents/NC_738_LF_2025.pdf'
   },
   {
     id: '5',
@@ -167,7 +167,7 @@ const DOCUMENTS: Document[] = [
     description: 'Version consolidée incluant les modifications de la LF 2026. 850 articles.',
     isOfficial: true,
     hasAI: true,
-    url: 'https://www.tax.gov.ma/wps/wcm/connect/dgi_fr/resources/4f7b5c00445d4e8b9e5f9e5f9e5f9e5f/CGI+2026+FR.pdf'
+    url: '/documents/CGI_2026_FR.pdf'
   }
 ];
 
@@ -816,86 +816,173 @@ const CalendarView = () => {
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
+  const [view, setView] = useState<'month' | 'year'>('month');
 
   const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-  const getDeadlines = () => {
-    const deadlines = [
-      { day: 20, title: "Déclaration & Paiement TVA", type: "Mensuel", monthOffset: 0 },
-      { day: 31, title: "Versement IS (Acompte)", type: "Trimestriel", months: [2, 5, 8, 11] },
-      { day: 28, title: "Déclaration IR (Salaires)", type: "Mensuel", monthOffset: 0 },
-      { day: 31, title: "Déclaration Annuelle IS", type: "Annuel", months: [2] },
-      { day: 30, title: "Taxe Professionnelle", type: "Annuel", months: [5] },
-    ];
+  const ALL_DEADLINES = [
+    // Mensuel
+    { day: 20, title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true },
+    { day: 28, title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true },
+    
+    // Trimestriel
+    { day: 31, title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2 },
+    { day: 30, title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5 },
+    { day: 30, title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8 },
+    { day: 31, title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11 },
+    
+    // Annuel
+    { day: 28, title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1 },
+    { day: 31, title: "Déclaration Annuelle IS", type: "Annuel", month: 2 },
+    { day: 31, title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2 },
+    { day: 30, title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3 },
+    { day: 31, title: "Taxe de Services Communaux", type: "Annuel", month: 5 },
+  ];
 
-    return deadlines
-      .filter(d => !d.months || d.months.includes(currentMonth))
-      .map(d => ({
-        date: `${d.day} ${months[currentMonth]}`,
-        title: d.title,
-        type: d.type,
-        isUrgent: d.day - today.getDate() < 5 && d.day >= today.getDate()
-      }))
-      .sort((a, b) => parseInt(a.date) - parseInt(b.date));
+  const getDeadlines = () => {
+    if (view === 'month') {
+      return ALL_DEADLINES
+        .filter(d => d.isMonthly || d.month === currentMonth)
+        .map(d => ({
+          date: `${d.day} ${months[currentMonth]}`,
+          title: d.title,
+          type: d.type,
+          isUrgent: d.day - today.getDate() < 5 && d.day >= today.getDate(),
+          monthIdx: currentMonth
+        }))
+        .sort((a, b) => parseInt(a.date) - parseInt(b.date));
+    } else {
+      // Yearly view: show all major deadlines grouped by month
+      const yearly = [];
+      for (let m = 0; m < 12; m++) {
+        const monthDeadlines = ALL_DEADLINES.filter(d => d.isMonthly || d.month === m);
+        monthDeadlines.forEach(d => {
+          yearly.push({
+            date: `${d.day} ${months[m]}`,
+            title: d.title,
+            type: d.type,
+            isUrgent: m === currentMonth && d.day - today.getDate() < 5 && d.day >= today.getDate(),
+            monthIdx: m
+          });
+        });
+      }
+      return yearly;
+    }
   };
 
   const events = getDeadlines();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900">Calendrier Fiscal Dynamique</h2>
-        <Badge variant="outline" className="bg-white">{months[currentMonth]} {currentYear}</Badge>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Échéancier Fiscal {currentYear}</h2>
+          <p className="text-sm text-slate-500">Suivez vos obligations fiscales tout au long de l'année.</p>
+        </div>
+        <div className="flex bg-slate-100 p-1 rounded-lg">
+          <button 
+            onClick={() => setView('month')}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${view === 'month' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Mois en cours
+          </button>
+          <button 
+            onClick={() => setView('year')}
+            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${view === 'year' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Vue Annuelle
+          </button>
+        </div>
       </div>
-      <Card className="border-slate-200 shadow-xl">
+
+      <Card className="border-slate-200 shadow-xl overflow-hidden">
         <CardHeader className="bg-slate-50 border-b py-4">
           <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            Échéances du mois en cours
+            {view === 'month' ? `Échéances de ${months[currentMonth]}` : 'Calendrier Fiscal Complet'}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-slate-100">
-            {events.length > 0 ? events.map((event, i) => (
-              <div key={i} className={`p-5 flex items-center justify-between hover:bg-slate-50 transition-colors ${event.isUrgent ? 'bg-red-50/30' : ''}`}>
-                <div className="flex items-center gap-5">
-                  <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center border shadow-sm ${
-                    event.isUrgent ? 'bg-red-600 border-red-700 text-white' : 'bg-white border-slate-200 text-slate-900'
-                  }`}>
-                    <span className={`text-[10px] font-bold uppercase leading-none ${event.isUrgent ? 'text-red-100' : 'text-slate-400'}`}>
-                      {event.date.split(' ')[1].substring(0, 3)}
-                    </span>
-                    <span className="text-xl font-black leading-none mt-1">{event.date.split(' ')[0]}</span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">{event.title}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-slate-100 text-slate-500 border-none uppercase tracking-tighter">
-                        {event.type}
-                      </Badge>
-                      {event.isUrgent && (
-                        <span className="text-[10px] font-bold text-red-600 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" /> Urgent
-                        </span>
-                      )}
+          <ScrollArea className={view === 'year' ? "h-[600px]" : ""}>
+            <div className="divide-y divide-slate-100">
+              {events.length > 0 ? events.map((event, i) => (
+                <div key={i} className={`p-5 flex items-center justify-between hover:bg-slate-50 transition-colors ${event.isUrgent ? 'bg-red-50/30' : ''}`}>
+                  <div className="flex items-center gap-5">
+                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center border shadow-sm ${
+                      event.isUrgent ? 'bg-red-600 border-red-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}>
+                      <span className={`text-[10px] font-bold uppercase leading-none ${event.isUrgent ? 'text-red-100' : 'text-slate-400'}`}>
+                        {months[event.monthIdx].substring(0, 3)}
+                      </span>
+                      <span className="text-xl font-black leading-none mt-1">{event.date.split(' ')[0]}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">{event.title}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-slate-100 text-slate-500 border-none uppercase tracking-tighter">
+                          {event.type}
+                        </Badge>
+                        {event.isUrgent && (
+                          <span className="text-[10px] font-bold text-red-600 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Urgent
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50">
+                    Détails
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50">
-                  Détails
-                </Button>
-              </div>
-            )) : (
-              <div className="p-10 text-center space-y-3">
-                <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
-                <p className="text-sm font-medium text-slate-600">Aucune échéance majeure pour le reste du mois.</p>
-              </div>
-            )}
-          </div>
+              )) : (
+                <div className="p-10 text-center space-y-3">
+                  <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
+                  <p className="text-sm font-medium text-slate-600">Aucune échéance majeure trouvée.</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-slate-200 p-4 bg-blue-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+              <Info className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-blue-900">Rappel TVA</p>
+              <p className="text-[10px] text-blue-700">Avant le 20 de chaque mois.</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="border-slate-200 p-4 bg-purple-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+              <Scale className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-purple-900">Acomptes IS</p>
+              <p className="text-[10px] text-purple-700">Mars, Juin, Sept, Déc.</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="border-slate-200 p-4 bg-orange-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-orange-900">Déclaration IR</p>
+              <p className="text-[10px] text-orange-700">Avant le 30 Avril.</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <p className="text-[10px] text-slate-400 text-center italic">
-        * Ce calendrier est mis à jour automatiquement en fonction de la date système ({today.toLocaleDateString('fr-FR')}).
+        * Ce calendrier est indicatif. Référez-vous toujours aux textes officiels du CGI.
       </p>
     </div>
   );
