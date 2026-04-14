@@ -3,7 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
 import cron from "node-cron";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -15,7 +15,7 @@ const DB_PATH = path.join(process.cwd(), "db.json");
 app.use(express.json());
 
 // --- AI Setup ---
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // --- DB Helpers ---
@@ -45,35 +45,50 @@ async function generateDailyContent() {
     const db = await readDB();
     
     // 1. Generate News Item
-    const newsPrompt = "Génère un titre d'actualité fiscale marocaine réaliste pour l'année 2026. Format JSON: { \"title\": string, \"source\": string, \"category\": string, \"url\": string }. Ne réponds QUE le JSON.";
-    const newsResult = await model.generateContent(newsPrompt);
-    const newsText = newsResult.response.text().replace(/```json|```/g, "").trim();
-    const newsItem = JSON.parse(newsText);
-    newsItem.date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    db.news.unshift(newsItem);
+    try {
+      const newsPrompt = "Génère un titre d'actualité fiscale marocaine réaliste pour l'année 2026. Format JSON: { \"title\": string, \"source\": string, \"category\": string, \"url\": string }. Ne réponds QUE le JSON.";
+      const newsResult = await model.generateContent(newsPrompt);
+      const newsText = newsResult.response.text().replace(/```json|```/g, "").trim();
+      const newsItem = JSON.parse(newsText);
+      newsItem.date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      db.news.unshift(newsItem);
+      if (db.news.length > 20) db.news = db.news.slice(0, 20);
+    } catch (e) {
+      console.error("Failed to generate news item:", e);
+    }
 
     // 2. Generate AI News Item
-    const aiNewsPrompt = "Génère une actualité sur l'IA dans la fiscalité marocaine pour 2026. Format JSON: { \"title\": string, \"impact\": \"Élevé\" | \"Moyen\" | \"Critique\", \"topic\": string, \"url\": string }. Ne réponds QUE le JSON.";
-    const aiNewsResult = await model.generateContent(aiNewsPrompt);
-    const aiNewsText = aiNewsResult.response.text().replace(/```json|```/g, "").trim();
-    const aiNewsItem = JSON.parse(aiNewsText);
-    db.aiNews.unshift(aiNewsItem);
+    try {
+      const aiNewsPrompt = "Génère une actualité sur l'IA dans la fiscalité marocaine pour 2026. Format JSON: { \"title\": string, \"impact\": \"Élevé\" | \"Moyen\" | \"Critique\", \"topic\": string, \"url\": string }. Ne réponds QUE le JSON.";
+      const aiNewsResult = await model.generateContent(aiNewsPrompt);
+      const aiNewsText = aiNewsResult.response.text().replace(/```json|```/g, "").trim();
+      const aiNewsItem = JSON.parse(aiNewsText);
+      db.aiNews.unshift(aiNewsItem);
+      if (db.aiNews.length > 20) db.aiNews = db.aiNews.slice(0, 20);
+    } catch (e) {
+      console.error("Failed to generate AI news item:", e);
+    }
 
     // 3. Generate Expert Article
-    const articlePrompt = "Rédige un article d'expertise fiscale marocaine (300-400 mots) sur un sujet d'actualité en 2026. Format JSON: { \"title\": string, \"content\": string, \"topic\": string }. Le contenu doit être en Markdown. Ne réponds QUE le JSON.";
-    const articleResult = await model.generateContent(articlePrompt);
-    const articleText = articleResult.response.text().replace(/```json|```/g, "").trim();
-    const articleItem = JSON.parse(articleText);
-    articleItem.id = Date.now().toString();
-    articleItem.date = "À l'instant";
-    articleItem.author = "Expert Ledger IA";
-    db.publishedArticles.unshift(articleItem);
+    try {
+      const articlePrompt = "Rédige un article d'expertise fiscale marocaine (300-400 mots) sur un sujet d'actualité en 2026. Format JSON: { \"title\": string, \"content\": string, \"topic\": string }. Le contenu doit être en Markdown. Ne réponds QUE le JSON.";
+      const articleResult = await model.generateContent(articlePrompt);
+      const articleText = articleResult.response.text().replace(/```json|```/g, "").trim();
+      const articleItem = JSON.parse(articleText);
+      articleItem.id = Date.now().toString();
+      articleItem.date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      articleItem.author = "Expert Ledger IA";
+      db.publishedArticles.unshift(articleItem);
+      if (db.publishedArticles.length > 50) db.publishedArticles = db.publishedArticles.slice(0, 50);
+    } catch (e) {
+      console.error("Failed to generate expert article:", e);
+    }
 
     db.lastUpdate = new Date().toISOString();
     await writeDB(db);
-    console.log("Daily content generated successfully.");
+    console.log("Daily content generation attempt finished.");
   } catch (error) {
-    console.error("Error generating daily content:", error);
+    console.error("Critical error in generateDailyContent:", error);
   }
 }
 
