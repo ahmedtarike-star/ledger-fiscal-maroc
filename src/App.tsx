@@ -46,10 +46,16 @@ import {
   Edit3,
   Clock,
   ArrowRight,
-  Trash2
+  Trash2,
+  Share2,
+  Twitter,
+  Linkedin,
+  Facebook,
+  Link
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
+import { cn } from "@/lib/utils";
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -70,9 +76,74 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // --- AI Initialization ---
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
+// --- Share Component ---
+
+const ShareButton = ({ title, url, className }: { title: string, url?: string, className?: string }) => {
+  const shareUrl = url || window.location.href;
+  
+  const handleShare = (platform: string) => {
+    let link = '';
+    const encodedTitle = encodeURIComponent(title);
+    const encodedUrl = encodeURIComponent(shareUrl);
+
+    switch (platform) {
+      case 'twitter':
+        link = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`;
+        break;
+      case 'linkedin':
+        link = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+        break;
+      case 'facebook':
+        link = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(shareUrl);
+        // We could add a toast here if available
+        return;
+    }
+    if (link) window.open(link, '_blank');
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon" className={cn("h-8 w-8 text-slate-400 hover:text-blue-600", className)}>
+            <Share2 className="w-4 h-4" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={() => handleShare('twitter')} className="gap-2">
+          <Twitter className="w-4 h-4 text-sky-500" />
+          <span>Partager sur Twitter</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('linkedin')} className="gap-2">
+          <Linkedin className="w-4 h-4 text-blue-700" />
+          <span>Partager sur LinkedIn</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('facebook')} className="gap-2">
+          <Facebook className="w-4 h-4 text-blue-600" />
+          <span>Partager sur Facebook</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('copy')} className="gap-2">
+          <Link className="w-4 h-4 text-slate-500" />
+          <span>Copier le lien</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 // --- Types ---
 
@@ -508,6 +579,7 @@ const CommunityView = () => {
                       <Eye className="w-4 h-4" />
                       <span className="text-xs font-medium">{q.views} vues</span>
                     </div>
+                    <ShareButton title={q.title} className="ml-auto" />
                   </div>
                 </div>
                 {q.answers.length > 0 && (
@@ -647,7 +719,10 @@ const DashboardView = ({ onNavigate, urgentDeadlines }: { onNavigate: (tab: stri
                     <div className="w-2 h-2 rounded-full bg-red-500" />
                     <span className="text-sm font-medium text-slate-700">{alert.title}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">{alert.date}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{alert.date}</span>
+                    <ShareButton title={alert.title} />
+                  </div>
                 </div>
               )) : (
                 <div className="text-center py-4">
@@ -671,10 +746,17 @@ const DashboardView = ({ onNavigate, urgentDeadlines }: { onNavigate: (tab: stri
                 <div 
                   key={i} 
                   className="flex items-center justify-between group cursor-pointer"
-                  onClick={() => onNavigate('recommendations', rec.type)}
                 >
-                  <span className="text-sm text-slate-600 group-hover:text-blue-600 transition-colors">{rec.title}</span>
-                  <Badge variant="outline" className="text-[9px] uppercase tracking-tighter group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">{rec.type}</Badge>
+                  <span 
+                    className="text-sm text-slate-600 group-hover:text-blue-600 transition-colors flex-1"
+                    onClick={() => onNavigate('recommendations', rec.type)}
+                  >
+                    {rec.title}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[9px] uppercase tracking-tighter group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">{rec.type}</Badge>
+                    <ShareButton title={rec.title} />
+                  </div>
                 </div>
               ))}
               <Button 
@@ -719,6 +801,10 @@ const IRSimulatorView = () => {
         <p className="text-sm text-slate-500">Calculez votre Impôt sur le Revenu selon les derniers barèmes de la LF 2026.</p>
       </div>
       <Card className="border-slate-200 shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-lg">Calculateur</CardTitle>
+          <ShareButton title="Simulateur IR Maroc 2026" />
+        </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Salaire Mensuel Brut (MAD)</label>
@@ -774,7 +860,10 @@ const NewsView = ({ news }: { news: any[] }) => {
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
                 <p className="text-sm text-slate-500">Source: {item.source}</p>
               </div>
-              <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
+              <div className="flex flex-col items-end gap-2">
+                <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
+                <ShareButton title={item.title} url={item.url} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </CardContent>
           </Card>
         </a>
@@ -792,9 +881,12 @@ const AINewsView = ({ aiNews }: { aiNews: any[] }) => {
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
               <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-none">{item.topic}</Badge>
-              <span className={`text-[10px] font-bold uppercase ${item.impact === 'Critique' ? 'text-red-500' : 'text-green-500'}`}>
-                Impact {item.impact}
-              </span>
+              <div className="flex items-center gap-2">
+                <ShareButton title={item.title} url={item.url} />
+                <span className={`text-[10px] font-bold uppercase ${item.impact === 'Critique' ? 'text-red-500' : 'text-green-500'}`}>
+                  Impact {item.impact}
+                </span>
+              </div>
             </div>
             <CardTitle className="text-base leading-tight">{item.title}</CardTitle>
           </CardHeader>
@@ -851,6 +943,10 @@ const ISSimulatorView = () => {
         <p className="text-sm text-slate-500">Calculez votre Impôt sur les Sociétés et la Cotisation Minimale.</p>
       </div>
       <Card className="border-slate-200 shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-lg">Calculateur</CardTitle>
+          <ShareButton title="Simulateur IS Maroc 2026" />
+        </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -995,22 +1091,27 @@ const CalendarView = () => {
                       </div>
                     </div>
                   </div>
-                  <Dialog>
-                    <DialogTrigger render={
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold px-4">
-                        Détails
-                      </Button>
-                    } />
+                  <div className="flex items-center gap-2">
+                    <ShareButton title={event.title} />
+                    <Dialog>
+                      <DialogTrigger render={
+                        <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold px-4">
+                          Détails
+                        </Button>
+                      } />
                     <DialogContent className="sm:max-w-[450px] rounded-3xl">
                       <DialogHeader>
-                        <div className="flex items-center gap-4 mb-2">
-                          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-blue-600" />
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                              <Calendar className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <DialogTitle className="text-xl font-bold">{event.title}</DialogTitle>
+                              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{event.date}</p>
+                            </div>
                           </div>
-                          <div>
-                            <DialogTitle className="text-xl font-bold">{event.title}</DialogTitle>
-                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{event.date}</p>
-                          </div>
+                          <ShareButton title={event.title} />
                         </div>
                       </DialogHeader>
                       <div className="py-6 space-y-4">
@@ -1034,7 +1135,8 @@ const CalendarView = () => {
                     </DialogContent>
                   </Dialog>
                 </div>
-              )) : (
+              </div>
+            )) : (
                 <div className="p-16 text-center space-y-4">
                   <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-8 h-8 text-green-500" />
@@ -1214,6 +1316,7 @@ const PublishedArticlesView = ({
               
               {isAdmin && (
                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <ShareButton title={article.title} className="bg-white/90 backdrop-blur hover:bg-white text-slate-600 shadow-sm" />
                   <Dialog open={!!editingArticle && editingArticle.id === article.id} onOpenChange={(open) => !open && setEditingArticle(null)}>
                     <DialogTrigger render={
                       <Button 
@@ -1275,6 +1378,12 @@ const PublishedArticlesView = ({
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
+                </div>
+              )}
+
+              {!isAdmin && (
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <ShareButton title={article.title} className="bg-white/90 backdrop-blur hover:bg-white text-slate-600 shadow-sm" />
                 </div>
               )}
 
@@ -1560,13 +1669,16 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
         <DialogFooter className="p-6 border-t bg-white gap-3">
           {generatedArticle ? (
             <div className="flex items-center justify-between w-full">
-              <Button variant="ghost" className="text-slate-500 hover:text-red-600" onClick={() => {
-                setGeneratedArticle('');
-                setIsEditing(false);
-              }}>
-                <X className="w-4 h-4 mr-2" />
-                Annuler et recommencer
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" className="text-slate-500 hover:text-red-600" onClick={() => {
+                  setGeneratedArticle('');
+                  setIsEditing(false);
+                }}>
+                  <X className="w-4 h-4 mr-2" />
+                  Annuler et recommencer
+                </Button>
+                <ShareButton title={topic || "Nouvel Article Expert"} />
+              </div>
               <div className="flex items-center gap-3">
                 <Button 
                   variant="outline"
@@ -1897,13 +2009,16 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <Badge className={`${
-                    rec.priority === 'Critique' ? 'bg-red-500' : 
-                    rec.priority === 'Haute' ? 'bg-orange-500' : 
-                    rec.priority === 'Moyenne' ? 'bg-blue-500' : 'bg-slate-500'
-                  } text-white border-none text-[9px]`}>
-                    {rec.priority}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <ShareButton title={rec.title} />
+                    <Badge className={`${
+                      rec.priority === 'Critique' ? 'bg-red-500' : 
+                      rec.priority === 'Haute' ? 'bg-orange-500' : 
+                      rec.priority === 'Moyenne' ? 'bg-blue-500' : 'bg-slate-500'
+                    } text-white border-none text-[9px]`}>
+                      {rec.priority}
+                    </Badge>
+                  </div>
                   {isApplied && <Badge className="bg-green-600 text-white border-none text-[9px] animate-in fade-in zoom-in">Appliqué</Badge>}
                 </div>
               </CardHeader>
@@ -1945,11 +2060,14 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
           {selectedRec && (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`p-2 rounded-lg ${selectedRec.bgColor}`}>
-                    <selectedRec.icon className={`w-6 h-6 ${selectedRec.color}`} />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${selectedRec.bgColor}`}>
+                      <selectedRec.icon className={`w-6 h-6 ${selectedRec.color}`} />
+                    </div>
+                    <Badge variant="outline" className="uppercase tracking-widest text-[10px]">{selectedRec.type}</Badge>
                   </div>
-                  <Badge variant="outline" className="uppercase tracking-widest text-[10px]">{selectedRec.type}</Badge>
+                  <ShareButton title={selectedRec.title} />
                 </div>
                 <DialogTitle className="text-2xl font-black text-slate-900">{selectedRec.title}</DialogTitle>
                 <DialogDescription className="text-slate-500 mt-2">
@@ -2113,6 +2231,10 @@ const TVACalculatorView = () => {
         <p className="text-sm text-slate-500">Convertissez vos montants HT, TVA et TTC instantanément.</p>
       </div>
       <Card className="border-slate-200 shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-lg">Calculateur</CardTitle>
+          <ShareButton title="Calculateur TVA Maroc" />
+        </CardHeader>
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -2420,6 +2542,8 @@ export default function App() {
               </div>
               <Separator orientation="vertical" className="h-6" />
               
+              <ShareButton title="Ledger Fiscal Maroc - Intelligence Fiscale 2026" className="text-slate-500" />
+
               <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
                 <DialogTrigger render={
                   <Button variant="ghost" size="icon" className="relative text-slate-500">
