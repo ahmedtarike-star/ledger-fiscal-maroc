@@ -43,7 +43,9 @@ import {
   Users,
   Filter,
   Briefcase,
-  Edit3
+  Edit3,
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
@@ -654,6 +656,9 @@ const NewsView = () => {
     { title: "Digitalisation : La DGI lance une nouvelle plateforme", date: "08 Avril 2026", source: "Medias24", category: "Digital", url: "https://medias24.com/economie/" },
     { title: "Jurisprudence : Arrêt de la cour de cassation sur la TVA", date: "05 Avril 2026", source: "Justice.ma", category: "Juridique", url: "https://www.justice.gov.ma/fr/actualites/" },
     { title: "PLF 2026 : Les grandes orientations budgétaires", date: "01 Avril 2026", source: "Finances.gov.ma", category: "Budget", url: "https://www.finances.gov.ma/fr/Pages/actualites.aspx" },
+    { title: "Le Maroc renforce son attractivité fiscale pour les startups", date: "28 Mars 2026", source: "Challenge.ma", category: "Investissement", url: "https://www.challenge.ma/category/economie/" },
+    { title: "Simplification des procédures douanières : Ce qui change", date: "25 Mars 2026", source: "La Vie Éco", category: "Douane", url: "https://lavieeco.com/economie/" },
+    { title: "Rapport annuel de la Cour des Comptes sur la gestion publique", date: "20 Mars 2026", source: "TelQuel", category: "Gouvernance", url: "https://telquel.ma/economie" },
   ];
 
   return (
@@ -819,26 +824,27 @@ const CalendarView = () => {
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
   const [view, setView] = useState<'month' | 'year'>('month');
+  const [selectedDeadline, setSelectedDeadline] = useState<any>(null);
 
   const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
   const ALL_DEADLINES = [
     // Mensuel
-    { day: 20, title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true },
-    { day: 28, title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true },
+    { day: 20, title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true, description: "La déclaration de la TVA doit être effectuée mensuellement pour les entreprises dont le chiffre d'affaires taxable est supérieur à 1 million de dirhams." },
+    { day: 28, title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true, description: "Versement de l'impôt sur le revenu retenu à la source sur les salaires payés au cours du mois précédent." },
     
     // Trimestriel
-    { day: 31, title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2 },
-    { day: 30, title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5 },
-    { day: 30, title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8 },
-    { day: 31, title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11 },
+    { day: 31, title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2, description: "Premier acompte provisionnel de l'Impôt sur les Sociétés au titre de l'exercice en cours." },
+    { day: 30, title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5, description: "Deuxième acompte provisionnel de l'Impôt sur les Sociétés." },
+    { day: 30, title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8, description: "Troisième acompte provisionnel de l'Impôt sur les Sociétés." },
+    { day: 31, title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11, description: "Quatrième et dernier acompte provisionnel de l'Impôt sur les Sociétés." },
     
     // Annuel
-    { day: 28, title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1 },
-    { day: 31, title: "Déclaration Annuelle IS", type: "Annuel", month: 2 },
-    { day: 31, title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2 },
-    { day: 30, title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3 },
-    { day: 31, title: "Taxe de Services Communaux", type: "Annuel", month: 5 },
+    { day: 28, title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1, description: "Déclaration annuelle des revenus fonciers encaissés au cours de l'année précédente." },
+    { day: 31, title: "Déclaration Annuelle IS", type: "Annuel", month: 2, description: "Dépôt de la liasse fiscale et déclaration du résultat fiscal pour les sociétés clôturant au 31 décembre." },
+    { day: 31, title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2, description: "Paiement de la Taxe Professionnelle et de la Taxe de Services Communaux." },
+    { day: 30, title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3, description: "Déclaration annuelle du revenu global pour les personnes physiques soumises à l'IR professionnel." },
+    { day: 31, title: "Taxe de Services Communaux", type: "Annuel", month: 5, description: "Date limite de paiement sans pénalités pour la TSC." },
   ];
 
   const getDeadlines = () => {
@@ -846,23 +852,20 @@ const CalendarView = () => {
       return ALL_DEADLINES
         .filter(d => d.isMonthly || d.month === currentMonth)
         .map(d => ({
+          ...d,
           date: `${d.day} ${months[currentMonth]}`,
-          title: d.title,
-          type: d.type,
           isUrgent: d.day - today.getDate() < 5 && d.day >= today.getDate(),
           monthIdx: currentMonth
         }))
-        .sort((a, b) => parseInt(a.date) - parseInt(b.date));
+        .sort((a, b) => a.day - b.day);
     } else {
-      // Yearly view: show all major deadlines grouped by month
       const yearly = [];
       for (let m = 0; m < 12; m++) {
         const monthDeadlines = ALL_DEADLINES.filter(d => d.isMonthly || d.month === m);
         monthDeadlines.forEach(d => {
           yearly.push({
+            ...d,
             date: `${d.day} ${months[m]}`,
-            title: d.title,
-            type: d.type,
             isUrgent: m === currentMonth && d.day - today.getDate() < 5 && d.day >= today.getDate(),
             monthIdx: m
           });
@@ -881,65 +884,107 @@ const CalendarView = () => {
           <h2 className="text-2xl font-bold text-slate-900">Échéancier Fiscal {currentYear}</h2>
           <p className="text-sm text-slate-500">Suivez vos obligations fiscales tout au long de l'année.</p>
         </div>
-        <div className="flex bg-slate-100 p-1 rounded-lg">
+        <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200">
           <button 
             onClick={() => setView('month')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${view === 'month' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${view === 'month' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Mois en cours
           </button>
           <button 
             onClick={() => setView('year')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${view === 'year' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${view === 'year' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
           >
             Vue Annuelle
           </button>
         </div>
       </div>
 
-      <Card className="border-slate-200 shadow-xl overflow-hidden">
-        <CardHeader className="bg-slate-50 border-b py-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            {view === 'month' ? `Échéances de ${months[currentMonth]}` : 'Calendrier Fiscal Complet'}
+      <Card className="border-slate-200 shadow-xl overflow-hidden rounded-3xl">
+        <CardHeader className="bg-slate-50/50 border-b py-5 px-6">
+          <CardTitle className="text-base flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Calendar className="w-5 h-5 text-blue-600" />
+            </div>
+            <span className="font-bold text-slate-900">
+              {view === 'month' ? `Échéances de ${months[currentMonth]}` : 'Calendrier Fiscal Complet'}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className={view === 'year' ? "h-[600px]" : ""}>
             <div className="divide-y divide-slate-100">
               {events.length > 0 ? events.map((event, i) => (
-                <div key={i} className={`p-5 flex items-center justify-between hover:bg-slate-50 transition-colors ${event.isUrgent ? 'bg-red-50/30' : ''}`}>
-                  <div className="flex items-center gap-5">
-                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center border shadow-sm ${
+                <div key={i} className={`p-6 flex items-center justify-between hover:bg-slate-50 transition-colors ${event.isUrgent ? 'bg-red-50/30' : ''}`}>
+                  <div className="flex items-center gap-6">
+                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-sm transition-transform hover:scale-105 ${
                       event.isUrgent ? 'bg-red-600 border-red-700 text-white' : 'bg-white border-slate-200 text-slate-900'
                     }`}>
                       <span className={`text-[10px] font-bold uppercase leading-none ${event.isUrgent ? 'text-red-100' : 'text-slate-400'}`}>
                         {months[event.monthIdx].substring(0, 3)}
                       </span>
-                      <span className="text-xl font-black leading-none mt-1">{event.date.split(' ')[0]}</span>
+                      <span className="text-2xl font-black leading-none mt-1">{event.day}</span>
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">{event.title}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-slate-100 text-slate-500 border-none uppercase tracking-tighter">
+                      <h4 className="text-base font-bold text-slate-900">{event.title}</h4>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-2 bg-slate-100 text-slate-600 border-none font-bold uppercase tracking-tighter">
                           {event.type}
                         </Badge>
                         {event.isUrgent && (
-                          <span className="text-[10px] font-bold text-red-600 flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-red-600 flex items-center gap-1 bg-red-100 px-2 py-0.5 rounded-full">
                             <AlertTriangle className="w-3 h-3" /> Urgent
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50">
-                    Détails
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger render={<Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold px-4" />}>
+                      Détails
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[450px] rounded-3xl">
+                      <DialogHeader>
+                        <div className="flex items-center gap-4 mb-2">
+                          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <Calendar className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <DialogTitle className="text-xl font-bold">{event.title}</DialogTitle>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{event.date}</p>
+                          </div>
+                        </div>
+                      </DialogHeader>
+                      <div className="py-6 space-y-4">
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-sm text-slate-600 leading-relaxed">{event.description || "Aucune description détaillée disponible pour cette échéance."}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Type</p>
+                            <p className="text-sm font-bold text-blue-900">{event.type}</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Périodicité</p>
+                            <p className="text-sm font-bold text-slate-900">{event.isMonthly ? 'Mensuelle' : 'Annuelle/Trim.'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl h-11 font-bold">Ajouter à mon calendrier</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               )) : (
-                <div className="p-10 text-center space-y-3">
-                  <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
-                  <p className="text-sm font-medium text-slate-600">Aucune échéance majeure trouvée.</p>
+                <div className="p-16 text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-bold text-slate-900">Tout est à jour !</p>
+                    <p className="text-sm text-slate-500">Aucune échéance majeure trouvée pour cette période.</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1071,56 +1116,73 @@ interface PublishedArticle {
 
 const PublishedArticlesView = ({ articles }: { articles: PublishedArticle[] }) => {
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Articles Publiés</h2>
-          <p className="text-sm text-slate-500">Contenu généré par IA et validé par nos experts.</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bibliothèque d'Expertise</h2>
+          <p className="text-sm text-slate-500 font-medium">Analyses approfondies et guides pratiques générés par notre IA experte.</p>
         </div>
       </div>
       
       {articles.length === 0 ? (
-        <Card className="border-slate-200 p-12 text-center">
-          <div className="max-w-xs mx-auto space-y-4">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-              <FileText className="w-8 h-8 text-slate-400" />
+        <Card className="border-slate-200 p-16 text-center bg-white shadow-sm rounded-3xl">
+          <div className="max-w-xs mx-auto space-y-6">
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+              <FileText className="w-10 h-10 text-blue-400" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">Aucun article publié</h3>
-            <p className="text-sm text-slate-500">Utilisez le générateur d'articles pour créer et publier votre premier contenu fiscal.</p>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-slate-900">Prêt à publier ?</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Vos articles générés apparaîtront ici. Commencez par créer votre premier contenu expert.</p>
+            </div>
           </div>
         </Card>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {articles.map((article) => (
-            <Card key={article.id} className="border-slate-200 overflow-hidden hover:shadow-lg transition-all">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-blue-50 text-blue-700 border-none">{article.topic}</Badge>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">{article.date}</span>
+            <Card key={article.id} className="border-slate-200 overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col group bg-white rounded-3xl">
+              <div className="h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge className="bg-blue-50 text-blue-700 border-none px-3 py-1 text-[10px] font-bold uppercase tracking-wider">{article.topic}</Badge>
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-[10px] font-bold uppercase">5 min de lecture</span>
+                  </div>
                 </div>
-                <CardTitle className="text-xl text-slate-900">{article.title}</CardTitle>
+                <CardTitle className="text-xl text-slate-900 leading-tight group-hover:text-blue-600 transition-colors">{article.title}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="prose prose-slate prose-sm max-w-none line-clamp-3 text-slate-600">
+              <CardContent className="flex-1">
+                <div className="prose prose-slate prose-sm max-w-none line-clamp-4 text-slate-600 leading-relaxed">
                   <ReactMarkdown>{article.content}</ReactMarkdown>
                 </div>
               </CardContent>
-              <CardFooter className="bg-slate-50 border-t flex justify-between items-center py-3">
-                <div className="flex items-center gap-2">
-                  <User className="w-3 h-3 text-slate-400" />
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">{article.author}</span>
+              <CardFooter className="bg-slate-50/50 border-t flex justify-between items-center py-4 px-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <User className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-900 uppercase leading-none">{article.author}</span>
+                    <span className="text-[9px] text-slate-400 font-medium mt-1">{article.date}</span>
+                  </div>
                 </div>
                 <Dialog>
-                  <DialogTrigger render={<Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold" />}>
-                    Lire l'article complet
+                  <DialogTrigger render={<Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold gap-2" />}>
+                    Lire l'article <ArrowRight className="w-4 h-4" />
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0">
-                    <DialogHeader className="p-6 border-b">
-                      <DialogTitle>{article.title}</DialogTitle>
+                  <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col p-0 border-none shadow-2xl">
+                    <DialogHeader className="p-8 border-b bg-white sticky top-0 z-10">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Badge className="bg-blue-50 text-blue-700 border-none">{article.topic}</Badge>
+                        <span className="text-xs text-slate-400 font-medium">{article.date} • 5 min de lecture</span>
+                      </div>
+                      <DialogTitle className="text-3xl font-black text-slate-900 leading-tight">{article.title}</DialogTitle>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 p-8">
-                      <div className="prose prose-slate prose-lg max-w-none">
-                        <ReactMarkdown>{article.content}</ReactMarkdown>
+                    <ScrollArea className="flex-1 bg-slate-50/30">
+                      <div className="p-8 md:p-12 max-w-3xl mx-auto bg-white my-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div className="prose prose-slate prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-strong:text-slate-900">
+                          <ReactMarkdown>{article.content}</ReactMarkdown>
+                        </div>
                       </div>
                     </ScrollArea>
                   </DialogContent>
