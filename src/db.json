@@ -1,0 +1,19 @@
+{
+  "news": [
+    { "title": "Réforme de l'IS 2026 : Ce qu'il faut retenir", "date": "12 Avril 2026", "source": "L'Economiste", "category": "Fiscalité", "url": "https://leconomiste.com/categorie/economie" },
+    { "title": "Nouveaux seuils pour le régime de l'auto-entrepreneur", "date": "10 Avril 2026", "source": "DGI", "category": "Réglementation", "url": "https://www.tax.gov.ma/wps/portal/DGI/Actualites" },
+    { "title": "Digitalisation : La DGI lance une nouvelle plateforme", "date": "08 Avril 2026", "source": "Medias24", "category": "Digital", "url": "https://medias24.com/economie/" },
+    { "title": "Jurisprudence : Arrêt de la cour de cassation sur la TVA", "date": "05 Avril 2026", "source": "Justice.ma", "category": "Juridique", "url": "https://www.justice.gov.ma/fr/actualites/" },
+    { "title": "PLF 2026 : Les grandes orientations budgétaires", "date": "01 Avril 2026", "source": "Finances.gov.ma", "category": "Budget", "url": "https://www.finances.gov.ma/fr/Pages/actualites.aspx" },
+    { "title": "Le Maroc renforce son attractivité fiscale pour les startups", "date": "28 Mars 2026", "source": "Challenge.ma", "category": "Investissement", "url": "https://www.challenge.ma/category/economie/" },
+    { "title": "Simplification des procédures douanières : Ce qui change", "date": "25 Mars 2026", "source": "La Vie Éco", "category": "Douane", "url": "https://lavieeco.com/economie/" },
+    { "title": "Rapport annuel de la Cour des Comptes sur la gestion publique", "date": "20 Mars 2026", "source": "TelQuel", "category": "Gouvernance", "url": "https://telquel.ma/economie" }
+  ],
+  "aiNews": [
+    { "title": "L'IA générative au service de l'audit fiscal", "impact": "Élevé", "topic": "Audit", "url": "https://www.pwc.fr/fr/decryptages/transformation-digitale/ia-generative-audit.html" },
+    { "title": "Automatisation des déclarations de TVA par Ledger Fiscal", "impact": "Moyen", "topic": "Automatisation", "url": "https://www.ey.com/fr_fr/tax/tax-automation" },
+    { "title": "Nouveau modèle Gemini 3 pour l'analyse juridique", "impact": "Critique", "topic": "LLM", "url": "https://deepmind.google/technologies/gemini/" }
+  ],
+  "publishedArticles": [],
+  "lastUpdate": "2026-04-14T00:00:00.000Z"
+}
