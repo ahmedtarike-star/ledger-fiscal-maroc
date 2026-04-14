@@ -829,50 +829,103 @@ const CalendarView = () => {
 
   const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
+  // Moroccan Holidays 2026 (Estimated)
+  const HOLIDAYS_2026 = [
+    "2026-01-01", // New Year
+    "2026-01-11", // Manifesto of Independence
+    "2026-01-14", // Amazigh New Year
+    "2026-03-20", // Eid al-Fitr (approx)
+    "2026-03-21", // Eid al-Fitr (approx)
+    "2026-05-01", // Labour Day
+    "2026-05-27", // Eid al-Adha (approx)
+    "2026-05-28", // Eid al-Adha (approx)
+    "2026-06-16", // Islamic New Year (approx)
+    "2026-07-30", // Throne Day
+    "2026-08-14", // Oued Ed-Dahab
+    "2026-08-20", // Revolution of the King and the People
+    "2026-08-21", // Youth Day
+    "2026-08-25", // Mawlid (approx)
+    "2026-08-26", // Mawlid (approx)
+    "2026-11-06", // Green March
+    "2026-11-18", // Independence Day
+  ];
+
+  const isHoliday = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0];
+    return HOLIDAYS_2026.includes(dateString);
+  };
+
+  const isWeekend = (date: Date) => {
+    const day = date.getDay();
+    return day === 0 || day === 6; // 0 is Sunday, 6 is Saturday
+  };
+
+  const getNextBusinessDay = (date: Date) => {
+    let current = new Date(date);
+    while (isWeekend(current) || isHoliday(current)) {
+      current.setDate(current.getDate() + 1);
+    }
+    return current;
+  };
+
+  const getLastDayOfMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0);
+  };
+
   const ALL_DEADLINES = [
     // Mensuel
-    { day: 20, title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true, description: "La déclaration de la TVA doit être effectuée mensuellement pour les entreprises dont le chiffre d'affaires taxable est supérieur à 1 million de dirhams." },
-    { day: 28, title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true, description: "Versement de l'impôt sur le revenu retenu à la source sur les salaires payés au cours du mois précédent." },
+    { day: 'last', title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true, description: "La déclaration de la TVA doit être effectuée mensuellement pour les entreprises dont le chiffre d'affaires taxable est supérieur à 1 million de dirhams." },
+    { day: 'last', title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true, description: "Versement de l'impôt sur le revenu retenu à la source sur les salaires payés au cours du mois précédent." },
     
     // Trimestriel
-    { day: 31, title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2, description: "Premier acompte provisionnel de l'Impôt sur les Sociétés au titre de l'exercice en cours." },
-    { day: 30, title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5, description: "Deuxième acompte provisionnel de l'Impôt sur les Sociétés." },
-    { day: 30, title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8, description: "Troisième acompte provisionnel de l'Impôt sur les Sociétés." },
-    { day: 31, title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11, description: "Quatrième et dernier acompte provisionnel de l'Impôt sur les Sociétés." },
+    { day: 'last', title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2, description: "Premier acompte provisionnel de l'Impôt sur les Sociétés au titre de l'exercice en cours." },
+    { day: 'last', title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5, description: "Deuxième acompte provisionnel de l'Impôt sur les Sociétés." },
+    { day: 'last', title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8, description: "Troisième acompte provisionnel de l'Impôt sur les Sociétés." },
+    { day: 'last', title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11, description: "Quatrième et dernier acompte provisionnel de l'Impôt sur les Sociétés." },
     
     // Annuel
-    { day: 28, title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1, description: "Déclaration annuelle des revenus fonciers encaissés au cours de l'année précédente." },
-    { day: 31, title: "Déclaration Annuelle IS", type: "Annuel", month: 2, description: "Dépôt de la liasse fiscale et déclaration du résultat fiscal pour les sociétés clôturant au 31 décembre." },
-    { day: 31, title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2, description: "Paiement de la Taxe Professionnelle et de la Taxe de Services Communaux." },
-    { day: 30, title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3, description: "Déclaration annuelle du revenu global pour les personnes physiques soumises à l'IR professionnel." },
-    { day: 31, title: "Taxe de Services Communaux", type: "Annuel", month: 5, description: "Date limite de paiement sans pénalités pour la TSC." },
+    { day: 'last', title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1, description: "Déclaration annuelle des revenus fonciers encaissés au cours de l'année précédente." },
+    { day: 'last', title: "Déclaration Annuelle IS", type: "Annuel", month: 2, description: "Dépôt de la liasse fiscale et déclaration du résultat fiscal pour les sociétés clôturant au 31 décembre." },
+    { day: 'last', title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2, description: "Paiement de la Taxe Professionnelle et de la Taxe de Services Communaux." },
+    { day: 'last', title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3, description: "Déclaration annuelle du revenu global pour les personnes physiques soumises à l'IR professionnel." },
+    { day: 'last', title: "Taxe de Services Communaux", type: "Annuel", month: 5, description: "Date limite de paiement sans pénalités pour la TSC." },
   ];
 
   const getDeadlines = () => {
+    const processDeadline = (d: any, m: number) => {
+      let targetDate;
+      if (d.day === 'last') {
+        targetDate = getLastDayOfMonth(currentYear, m);
+      } else {
+        targetDate = new Date(currentYear, m, d.day as number);
+      }
+      
+      const adjustedDate = getNextBusinessDay(targetDate);
+      
+      return {
+        ...d,
+        day: adjustedDate.getDate(),
+        monthIdx: adjustedDate.getMonth(),
+        date: `${adjustedDate.getDate()} ${months[adjustedDate.getMonth()]}`,
+        isUrgent: adjustedDate.getTime() - today.getTime() < 5 * 24 * 60 * 60 * 1000 && adjustedDate.getTime() >= today.getTime(),
+        fullDate: adjustedDate
+      };
+    };
+
     if (view === 'month') {
       return ALL_DEADLINES
         .filter(d => d.isMonthly || d.month === currentMonth)
-        .map(d => ({
-          ...d,
-          date: `${d.day} ${months[currentMonth]}`,
-          isUrgent: d.day - today.getDate() < 5 && d.day >= today.getDate(),
-          monthIdx: currentMonth
-        }))
-        .sort((a, b) => a.day - b.day);
+        .map(d => processDeadline(d, currentMonth))
+        .sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
     } else {
       const yearly = [];
       for (let m = 0; m < 12; m++) {
         const monthDeadlines = ALL_DEADLINES.filter(d => d.isMonthly || d.month === m);
         monthDeadlines.forEach(d => {
-          yearly.push({
-            ...d,
-            date: `${d.day} ${months[m]}`,
-            isUrgent: m === currentMonth && d.day - today.getDate() < 5 && d.day >= today.getDate(),
-            monthIdx: m
-          });
+          yearly.push(processDeadline(d, m));
         });
       }
-      return yearly;
+      return yearly.sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
     }
   };
 
