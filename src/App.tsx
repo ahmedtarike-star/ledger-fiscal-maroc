@@ -753,18 +753,7 @@ const IRSimulatorView = () => {
   );
 };
 
-const NewsView = () => {
-  const news = [
-    { title: "Réforme de l'IS 2026 : Ce qu'il faut retenir", date: "12 Avril 2026", source: "L'Economiste", category: "Fiscalité", url: "https://leconomiste.com/categorie/economie" },
-    { title: "Nouveaux seuils pour le régime de l'auto-entrepreneur", date: "10 Avril 2026", source: "DGI", category: "Réglementation", url: "https://www.tax.gov.ma/wps/portal/DGI/Actualites" },
-    { title: "Digitalisation : La DGI lance une nouvelle plateforme", date: "08 Avril 2026", source: "Medias24", category: "Digital", url: "https://medias24.com/economie/" },
-    { title: "Jurisprudence : Arrêt de la cour de cassation sur la TVA", date: "05 Avril 2026", source: "Justice.ma", category: "Juridique", url: "https://www.justice.gov.ma/fr/actualites/" },
-    { title: "PLF 2026 : Les grandes orientations budgétaires", date: "01 Avril 2026", source: "Finances.gov.ma", category: "Budget", url: "https://www.finances.gov.ma/fr/Pages/actualites.aspx" },
-    { title: "Le Maroc renforce son attractivité fiscale pour les startups", date: "28 Mars 2026", source: "Challenge.ma", category: "Investissement", url: "https://www.challenge.ma/category/economie/" },
-    { title: "Simplification des procédures douanières : Ce qui change", date: "25 Mars 2026", source: "La Vie Éco", category: "Douane", url: "https://lavieeco.com/economie/" },
-    { title: "Rapport annuel de la Cour des Comptes sur la gestion publique", date: "20 Mars 2026", source: "TelQuel", category: "Gouvernance", url: "https://telquel.ma/economie" },
-  ];
-
+const NewsView = ({ news }: { news: any[] }) => {
   return (
     <div className="grid gap-6">
       {news.map((item, i) => (
@@ -794,13 +783,7 @@ const NewsView = () => {
   );
 };
 
-const AINewsView = () => {
-  const aiNews = [
-    { title: "L'IA générative au service de l'audit fiscal", impact: "Élevé", topic: "Audit", url: "https://www.pwc.fr/fr/decryptages/transformation-digitale/ia-generative-audit.html" },
-    { title: "Automatisation des déclarations de TVA par Ledger Fiscal", impact: "Moyen", topic: "Automatisation", url: "https://www.ey.com/fr_fr/tax/tax-automation" },
-    { title: "Nouveau modèle Gemini 3 pour l'analyse juridique", impact: "Critique", topic: "LLM", url: "https://deepmind.google/technologies/gemini/" },
-  ];
-
+const AINewsView = ({ aiNews }: { aiNews: any[] }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {aiNews.map((item, i) => (
@@ -1351,6 +1334,7 @@ const PublishedArticlesView = ({
 };
 
 const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedArticle) => void }) => {
+  const [mode, setMode] = useState<'ai' | 'manual'>('ai');
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [tone, setTone] = useState('Professionnel & Expert');
@@ -1384,6 +1368,12 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
     }
   };
 
+  const handleManualStart = () => {
+    if (!topic) return;
+    setGeneratedArticle('# ' + topic + '\n\nCommencez à rédiger votre article ici...');
+    setIsEditing(true);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       setIsOpen(open);
@@ -1395,8 +1385,8 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
       <DialogTrigger
         render={
           <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-lg shadow-blue-100">
-            <Sparkles className="w-4 h-4" />
-            Générer un article
+            <Plus className="w-4 h-4" />
+            Créer un article
           </Button>
         }
       />
@@ -1405,14 +1395,28 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <DialogTitle className="flex items-center gap-2 text-xl">
-                <Sparkles className="w-6 h-6 text-blue-600 animate-pulse" />
-                Générateur d'Articles SEO
+                <Edit3 className="w-6 h-6 text-blue-600" />
+                Nouvel Article Expert
               </DialogTitle>
               <DialogDescription>
-                Contenu fiscal expert optimisé pour le référencement au Maroc.
+                Rédigez votre propre contenu ou laissez l'IA générer une base solide pour vous.
               </DialogDescription>
             </div>
           </div>
+          {!generatedArticle && (
+            <Tabs value={mode} onValueChange={(v: any) => setMode(v)} className="mt-4">
+              <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1">
+                <TabsTrigger value="ai" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                  <Bot className="w-4 h-4 mr-2" />
+                  Génération IA
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Rédaction Manuelle
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
@@ -1421,7 +1425,7 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
               <div className="space-y-3">
                 <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-blue-500" />
-                  Sujet de l'article
+                  Titre de l'article
                 </label>
                 <Input 
                   placeholder="Ex: Les nouveautés de la LF 2026 sur l'IS" 
@@ -1430,43 +1434,77 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
                   className="h-12 border-slate-200 focus:ring-blue-500 bg-white text-base shadow-sm"
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-500" />
-                    Mots-clés cibles
-                  </label>
-                  <Input 
-                    placeholder="Ex: IS, Maroc, Fiscalité, 2026" 
-                    value={keywords}
-                    onChange={(e) => setKeywords(e.target.value)}
-                    className="h-12 border-slate-200 focus:ring-blue-500 bg-white shadow-sm"
-                  />
+
+              {mode === 'ai' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-amber-500" />
+                        Mots-clés cibles
+                      </label>
+                      <Input 
+                        placeholder="Ex: IS, Maroc, Fiscalité, 2026" 
+                        value={keywords}
+                        onChange={(e) => setKeywords(e.target.value)}
+                        className="h-12 border-slate-200 focus:ring-blue-500 bg-white shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-purple-500" />
+                        Ton de l'article
+                      </label>
+                      <select 
+                        className="w-full h-12 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                        value={tone}
+                        onChange={(e) => setTone(e.target.value)}
+                      >
+                        <option>Professionnel & Expert</option>
+                        <option>Informatif & Simple</option>
+                        <option>Analytique & Critique</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-4">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Info className="w-5 h-5 text-blue-600 shrink-0" />
+                    </div>
+                    <p className="text-sm text-blue-700 leading-relaxed">
+                      L'IA va générer un article structuré avec des balises H2/H3 et une densité de mots-clés optimale pour le marché marocain.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 space-y-6 max-w-2xl mx-auto w-full">
+                  <div className="space-y-4 p-6 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="space-y-3">
+                      <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        Titre de votre article
+                      </label>
+                      <Input 
+                        placeholder="Ex: Guide complet sur la TVA immobilière 2026" 
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                        className="h-12 border-slate-200 focus:ring-blue-500 bg-slate-50/50 text-base font-medium"
+                      />
+                    </div>
+                    
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-4">
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <Edit3 className="w-5 h-5 text-blue-600 shrink-0" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-900">Mode Rédaction Libre</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Prenez le contrôle total. Vous serez redirigé vers un éditeur plein écran pour rédiger votre contenu en Markdown ou texte brut.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-purple-500" />
-                    Ton de l'article
-                  </label>
-                  <select 
-                    className="w-full h-12 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
-                    value={tone}
-                    onChange={(e) => setTone(e.target.value)}
-                  >
-                    <option>Professionnel & Expert</option>
-                    <option>Informatif & Simple</option>
-                    <option>Analytique & Critique</option>
-                  </select>
-                </div>
-              </div>
-              <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-4">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Info className="w-5 h-5 text-blue-600 shrink-0" />
-                </div>
-                <p className="text-sm text-blue-700 leading-relaxed">
-                  L'IA va générer un article structuré avec des balises H2/H3 et une densité de mots-clés optimale pour le marché marocain.
-                </p>
-              </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col min-h-0 m-4 border rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -1588,23 +1626,34 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
           ) : (
             <div className="flex items-center justify-end w-full gap-3">
               <Button variant="ghost" onClick={() => setIsOpen(false)}>Fermer</Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 px-10 h-12 text-base font-bold" 
-                onClick={handleGenerate}
-                disabled={isGenerating || !topic}
-              >
-                {isGenerating ? (
-                  <>
-                    <span className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mr-3" />
-                    Rédaction de votre article...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Générer l'article maintenant
-                  </>
-                )}
-              </Button>
+              {mode === 'ai' ? (
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 px-10 h-12 text-base font-bold" 
+                  onClick={handleGenerate}
+                  disabled={isGenerating || !topic}
+                >
+                  {isGenerating ? (
+                    <>
+                      <span className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin mr-3" />
+                      Rédaction de votre article...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Générer l'article maintenant
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 px-10 h-12 text-base font-bold" 
+                  onClick={handleManualStart}
+                  disabled={!topic}
+                >
+                  <Edit3 className="w-5 h-5 mr-2" />
+                  Commencer la rédaction
+                </Button>
+              )}
             </div>
           )}
         </DialogFooter>
@@ -2120,6 +2169,49 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [publishedArticles, setPublishedArticles] = useState<PublishedArticle[]>([]);
+  const [news, setNews] = useState<any[]>([]);
+  const [aiNews, setAiNews] = useState<any[]>([]);
+  const [isLoadingContent, setIsLoadingContent] = useState(true);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const res = await fetch('/api/content');
+        const data = await res.json();
+        setPublishedArticles(data.publishedArticles || []);
+        setNews(data.news || []);
+        setAiNews(data.aiNews || []);
+      } catch (error) {
+        console.error("Failed to fetch content:", error);
+      } finally {
+        setIsLoadingContent(false);
+      }
+    };
+    fetchContent();
+  }, []);
+
+  const handleDeleteArticle = async (id: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) return;
+    try {
+      await fetch(`/api/articles/${id}`, { method: 'DELETE' });
+      setPublishedArticles(prev => prev.filter(a => a.id !== id));
+    } catch (error) {
+      console.error("Failed to delete article:", error);
+    }
+  };
+
+  const handleUpdateArticle = async (updatedArticle: PublishedArticle) => {
+    try {
+      await fetch(`/api/articles/${updatedArticle.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedArticle)
+      });
+      setPublishedArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a));
+    } catch (error) {
+      console.error("Failed to update article:", error);
+    }
+  };
   const [recommendationFilter, setRecommendationFilter] = useState('Tous');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2285,9 +2377,18 @@ export default function App() {
 
           {isAdmin && (
             <div className="p-4 border-t border-slate-100">
-              <GenerateArticleDialog onPublish={(article) => {
-                setPublishedArticles(prev => [article, ...prev]);
-                setActiveTab('articles');
+              <GenerateArticleDialog onPublish={async (article) => {
+                try {
+                  await fetch('/api/articles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(article)
+                  });
+                  setPublishedArticles(prev => [article, ...prev]);
+                  setActiveTab('articles');
+                } catch (error) {
+                  console.error("Failed to publish article:", error);
+                }
               }} />
             </div>
           )}
@@ -2501,8 +2602,8 @@ export default function App() {
                   <PublishedArticlesView 
                     articles={publishedArticles} 
                     isAdmin={isAdmin}
-                    onDelete={(id) => setPublishedArticles(prev => prev.filter(a => a.id !== id))}
-                    onUpdate={(updatedArticle) => setPublishedArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a))}
+                    onDelete={handleDeleteArticle}
+                    onUpdate={handleUpdateArticle}
                   />
                 </motion.div>
               ) : activeTab === 'recommendations' ? (
@@ -2642,7 +2743,7 @@ export default function App() {
                     <h2 className="text-2xl font-bold text-slate-900">Revue de Presse Fiscale</h2>
                     <p className="text-sm text-slate-500">Les dernières actualités juridiques et économiques du Maroc.</p>
                   </div>
-                  <NewsView />
+                  <NewsView news={news} />
                 </motion.div>
               ) : activeTab === 'ai-news' ? (
                 <motion.div
@@ -2656,7 +2757,7 @@ export default function App() {
                     <h2 className="text-2xl font-bold text-slate-900">Actualités Intelligence Artificielle</h2>
                     <p className="text-sm text-slate-500">Comment l'IA révolutionne la gestion fiscale et juridique.</p>
                   </div>
-                  <AINewsView />
+                  <AINewsView aiNews={aiNews} />
                 </motion.div>
               ) : activeTab === 'seo' && isAdmin ? (
                 <motion.div
