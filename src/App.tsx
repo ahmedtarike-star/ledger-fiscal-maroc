@@ -45,7 +45,8 @@ import {
   Briefcase,
   Edit3,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
@@ -1114,7 +1115,19 @@ interface PublishedArticle {
   topic: string;
 }
 
-const PublishedArticlesView = ({ articles }: { articles: PublishedArticle[] }) => {
+const PublishedArticlesView = ({ 
+  articles, 
+  isAdmin, 
+  onDelete, 
+  onUpdate 
+}: { 
+  articles: PublishedArticle[], 
+  isAdmin: boolean,
+  onDelete: (id: string) => void,
+  onUpdate: (article: PublishedArticle) => void
+}) => {
+  const [editingArticle, setEditingArticle] = useState<PublishedArticle | null>(null);
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
@@ -1139,8 +1152,75 @@ const PublishedArticlesView = ({ articles }: { articles: PublishedArticle[] }) =
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {articles.map((article) => (
-            <Card key={article.id} className="border-slate-200 overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col group bg-white rounded-3xl">
+            <Card key={article.id} className="border-slate-200 overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col group bg-white rounded-3xl relative">
               <div className="h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
+              
+              {isAdmin && (
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <Dialog open={!!editingArticle && editingArticle.id === article.id} onOpenChange={(open) => !open && setEditingArticle(null)}>
+                    <DialogTrigger render={
+                      <Button 
+                        variant="secondary" 
+                        size="icon-sm" 
+                        className="bg-white/90 backdrop-blur hover:bg-white text-slate-600 shadow-sm"
+                        onClick={() => setEditingArticle(article)}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </Button>
+                    } />
+                    <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0">
+                      <DialogHeader className="p-6 border-b">
+                        <DialogTitle>Modifier l'article</DialogTitle>
+                      </DialogHeader>
+                      <div className="flex-1 p-6 space-y-4 overflow-hidden flex flex-col">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Titre</label>
+                          <Input 
+                            value={editingArticle?.title || ''} 
+                            onChange={(e) => setEditingArticle(prev => prev ? {...prev, title: e.target.value} : null)}
+                          />
+                        </div>
+                        <div className="flex-1 flex flex-col space-y-2 min-h-0">
+                          <label className="text-sm font-bold text-slate-700">Contenu (Markdown)</label>
+                          <textarea
+                            className="flex-1 w-full p-4 rounded-xl border border-slate-200 text-sm leading-relaxed outline-none resize-none font-mono focus:border-blue-300 transition-colors bg-slate-50"
+                            value={editingArticle?.content || ''}
+                            onChange={(e) => setEditingArticle(prev => prev ? {...prev, content: e.target.value} : null)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter className="p-6 border-t bg-white">
+                        <Button variant="ghost" onClick={() => setEditingArticle(null)}>Annuler</Button>
+                        <Button 
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => {
+                            if (editingArticle) {
+                              onUpdate(editingArticle);
+                              setEditingArticle(null);
+                            }
+                          }}
+                        >
+                          Enregistrer les modifications
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button 
+                    variant="secondary" 
+                    size="icon-sm" 
+                    className="bg-white/90 backdrop-blur hover:bg-red-50 hover:text-red-600 text-slate-600 shadow-sm"
+                    onClick={() => {
+                      if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+                        onDelete(article.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
+
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <Badge className="bg-blue-50 text-blue-700 border-none px-3 py-1 text-[10px] font-bold uppercase tracking-wider">{article.topic}</Badge>
@@ -2262,7 +2342,12 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   className="max-w-6xl mx-auto"
                 >
-                  <PublishedArticlesView articles={publishedArticles} />
+                  <PublishedArticlesView 
+                    articles={publishedArticles} 
+                    isAdmin={isAdmin}
+                    onDelete={(id) => setPublishedArticles(prev => prev.filter(a => a.id !== id))}
+                    onUpdate={(updatedArticle) => setPublishedArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a))}
+                  />
                 </motion.div>
               ) : activeTab === 'recommendations' ? (
                 <motion.div
