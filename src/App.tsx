@@ -76,6 +76,108 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 // --- Types ---
 
+interface Deadline {
+  day: number | 'last';
+  title: string;
+  type: string;
+  isMonthly?: boolean;
+  month?: number;
+  description: string;
+}
+
+interface ProcessedDeadline extends Deadline {
+  day: number;
+  monthIdx: number;
+  date: string;
+  isUrgent: boolean;
+  fullDate: Date;
+}
+
+// --- Fiscal Utilities ---
+
+const HOLIDAYS_2026 = [
+  "2026-01-01", // New Year
+  "2026-01-11", // Manifesto of Independence
+  "2026-01-14", // Amazigh New Year
+  "2026-03-20", // Eid al-Fitr (approx)
+  "2026-03-21", // Eid al-Fitr (approx)
+  "2026-05-01", // Labour Day
+  "2026-05-27", // Eid al-Adha (approx)
+  "2026-05-28", // Eid al-Adha (approx)
+  "2026-06-16", // Islamic New Year (approx)
+  "2026-07-30", // Throne Day
+  "2026-08-14", // Oued Ed-Dahab
+  "2026-08-20", // Revolution of the King and the People
+  "2026-08-21", // Youth Day
+  "2026-08-25", // Mawlid (approx)
+  "2026-08-26", // Mawlid (approx)
+  "2026-11-06", // Green March
+  "2026-11-18", // Independence Day
+];
+
+const isHoliday = (date: Date) => {
+  const dateString = date.toISOString().split('T')[0];
+  return HOLIDAYS_2026.includes(dateString);
+};
+
+const isWeekend = (date: Date) => {
+  const day = date.getDay();
+  return day === 0 || day === 6; // 0 is Sunday, 6 is Saturday
+};
+
+const getNextBusinessDay = (date: Date) => {
+  let current = new Date(date);
+  while (isWeekend(current) || isHoliday(current)) {
+    current.setDate(current.getDate() + 1);
+  }
+  return current;
+};
+
+const getLastDayOfMonth = (year: number, month: number) => {
+  return new Date(year, month + 1, 0);
+};
+
+const ALL_DEADLINES: Deadline[] = [
+  // Mensuel
+  { day: 'last', title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true, description: "La déclaration de la TVA doit être effectuée mensuellement pour les entreprises dont le chiffre d'affaires taxable est supérieur à 1 million de dirhams." },
+  { day: 'last', title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true, description: "Versement de l'impôt sur le revenu retenu à la source sur les salaires payés au cours du mois précédent." },
+  
+  // Trimestriel
+  { day: 'last', title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2, description: "Premier acompte provisionnel de l'Impôt sur les Sociétés au titre de l'exercice en cours." },
+  { day: 'last', title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5, description: "Deuxième acompte provisionnel de l'Impôt sur les Sociétés." },
+  { day: 'last', title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8, description: "Troisième acompte provisionnel de l'Impôt sur les Sociétés." },
+  { day: 'last', title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11, description: "Quatrième et dernier acompte provisionnel de l'Impôt sur les Sociétés." },
+  
+  // Annuel
+  { day: 'last', title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1, description: "Déclaration annuelle des revenus fonciers encaissés au cours de l'année précédente." },
+  { day: 'last', title: "Déclaration Annuelle IS", type: "Annuel", month: 2, description: "Dépôt de la liasse fiscale et déclaration du résultat fiscal pour les sociétés clôturant au 31 décembre." },
+  { day: 'last', title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2, description: "Paiement de la Taxe Professionnelle et de la Taxe de Services Communaux." },
+  { day: 'last', title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3, description: "Déclaration annuelle du revenu global pour les personnes physiques soumises à l'IR professionnel." },
+  { day: 'last', title: "Taxe de Services Communaux", type: "Annuel", month: 5, description: "Date limite de paiement sans pénalités pour la TSC." },
+];
+
+const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+const processDeadline = (d: Deadline, m: number, currentYear: number, today: Date): ProcessedDeadline => {
+  let targetDate;
+  if (d.day === 'last') {
+    targetDate = getLastDayOfMonth(currentYear, m);
+  } else {
+    targetDate = new Date(currentYear, m, d.day as number);
+  }
+  
+  const adjustedDate = getNextBusinessDay(targetDate);
+  
+  return {
+    ...d,
+    day: adjustedDate.getDate(),
+    monthIdx: adjustedDate.getMonth(),
+    date: `${adjustedDate.getDate()} ${months[adjustedDate.getMonth()]}`,
+    isUrgent: adjustedDate.getTime() - today.getTime() < 5 * 24 * 60 * 60 * 1000 && adjustedDate.getTime() >= today.getTime(),
+    fullDate: adjustedDate
+  };
+};
+
 interface Document {
   id: string;
   title: string;
@@ -436,7 +538,7 @@ const CommunityView = () => {
   );
 };
 
-const DashboardView = ({ onNavigate }: { onNavigate: (tab: string, filter?: string) => void }) => {
+const DashboardView = ({ onNavigate, urgentDeadlines }: { onNavigate: (tab: string, filter?: string) => void, urgentDeadlines: ProcessedDeadline[] }) => {
   const data = [
     { name: 'Jan', value: 400 },
     { name: 'Feb', value: 300 },
@@ -476,12 +578,12 @@ const DashboardView = ({ onNavigate }: { onNavigate: (tab: string, filter?: stri
         <Card className="border-slate-200">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">Alertes Fiscales</CardTitle>
-            <div className="text-3xl font-bold text-slate-900">12</div>
+            <div className="text-3xl font-bold text-slate-900">{urgentDeadlines.length + 9}</div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-xs text-red-500">
               <Bell className="w-3 h-3" />
-              <span>3 critiques à traiter</span>
+              <span>{urgentDeadlines.length} critiques à traiter</span>
             </div>
           </CardContent>
         </Card>
@@ -539,18 +641,19 @@ const DashboardView = ({ onNavigate }: { onNavigate: (tab: string, filter?: stri
               <CardTitle className="text-base">Alertes Critiques</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { label: "Déclaration TVA", date: "Dans 2 jours", color: "bg-red-500" },
-                { label: "Paiement IS", date: "Dans 5 jours", color: "bg-orange-500" },
-              ].map((alert, i) => (
+              {urgentDeadlines.length > 0 ? urgentDeadlines.map((alert, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${alert.color}`} />
-                    <span className="text-sm font-medium text-slate-700">{alert.label}</span>
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <span className="text-sm font-medium text-slate-700">{alert.title}</span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase">{alert.date}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-slate-500">Aucune alerte critique pour le moment.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -827,102 +930,18 @@ const CalendarView = () => {
   const [view, setView] = useState<'month' | 'year'>('month');
   const [selectedDeadline, setSelectedDeadline] = useState<any>(null);
 
-  const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-
-  // Moroccan Holidays 2026 (Estimated)
-  const HOLIDAYS_2026 = [
-    "2026-01-01", // New Year
-    "2026-01-11", // Manifesto of Independence
-    "2026-01-14", // Amazigh New Year
-    "2026-03-20", // Eid al-Fitr (approx)
-    "2026-03-21", // Eid al-Fitr (approx)
-    "2026-05-01", // Labour Day
-    "2026-05-27", // Eid al-Adha (approx)
-    "2026-05-28", // Eid al-Adha (approx)
-    "2026-06-16", // Islamic New Year (approx)
-    "2026-07-30", // Throne Day
-    "2026-08-14", // Oued Ed-Dahab
-    "2026-08-20", // Revolution of the King and the People
-    "2026-08-21", // Youth Day
-    "2026-08-25", // Mawlid (approx)
-    "2026-08-26", // Mawlid (approx)
-    "2026-11-06", // Green March
-    "2026-11-18", // Independence Day
-  ];
-
-  const isHoliday = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
-    return HOLIDAYS_2026.includes(dateString);
-  };
-
-  const isWeekend = (date: Date) => {
-    const day = date.getDay();
-    return day === 0 || day === 6; // 0 is Sunday, 6 is Saturday
-  };
-
-  const getNextBusinessDay = (date: Date) => {
-    let current = new Date(date);
-    while (isWeekend(current) || isHoliday(current)) {
-      current.setDate(current.getDate() + 1);
-    }
-    return current;
-  };
-
-  const getLastDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0);
-  };
-
-  const ALL_DEADLINES = [
-    // Mensuel
-    { day: 'last', title: "Déclaration & Paiement TVA", type: "Mensuel", isMonthly: true, description: "La déclaration de la TVA doit être effectuée mensuellement pour les entreprises dont le chiffre d'affaires taxable est supérieur à 1 million de dirhams." },
-    { day: 'last', title: "Déclaration IR (Salaires)", type: "Mensuel", isMonthly: true, description: "Versement de l'impôt sur le revenu retenu à la source sur les salaires payés au cours du mois précédent." },
-    
-    // Trimestriel
-    { day: 'last', title: "Versement IS (1er Acompte)", type: "Trimestriel", month: 2, description: "Premier acompte provisionnel de l'Impôt sur les Sociétés au titre de l'exercice en cours." },
-    { day: 'last', title: "Versement IS (2ème Acompte)", type: "Trimestriel", month: 5, description: "Deuxième acompte provisionnel de l'Impôt sur les Sociétés." },
-    { day: 'last', title: "Versement IS (3ème Acompte)", type: "Trimestriel", month: 8, description: "Troisième acompte provisionnel de l'Impôt sur les Sociétés." },
-    { day: 'last', title: "Versement IS (4ème Acompte)", type: "Trimestriel", month: 11, description: "Quatrième et dernier acompte provisionnel de l'Impôt sur les Sociétés." },
-    
-    // Annuel
-    { day: 'last', title: "Déclaration Revenus Fonciers", type: "Annuel", month: 1, description: "Déclaration annuelle des revenus fonciers encaissés au cours de l'année précédente." },
-    { day: 'last', title: "Déclaration Annuelle IS", type: "Annuel", month: 2, description: "Dépôt de la liasse fiscale et déclaration du résultat fiscal pour les sociétés clôturant au 31 décembre." },
-    { day: 'last', title: "Taxe Professionnelle & TSC", type: "Annuel", month: 2, description: "Paiement de la Taxe Professionnelle et de la Taxe de Services Communaux." },
-    { day: 'last', title: "Déclaration Revenus Professionnels (IR)", type: "Annuel", month: 3, description: "Déclaration annuelle du revenu global pour les personnes physiques soumises à l'IR professionnel." },
-    { day: 'last', title: "Taxe de Services Communaux", type: "Annuel", month: 5, description: "Date limite de paiement sans pénalités pour la TSC." },
-  ];
-
   const getDeadlines = () => {
-    const processDeadline = (d: any, m: number) => {
-      let targetDate;
-      if (d.day === 'last') {
-        targetDate = getLastDayOfMonth(currentYear, m);
-      } else {
-        targetDate = new Date(currentYear, m, d.day as number);
-      }
-      
-      const adjustedDate = getNextBusinessDay(targetDate);
-      
-      return {
-        ...d,
-        day: adjustedDate.getDate(),
-        monthIdx: adjustedDate.getMonth(),
-        date: `${adjustedDate.getDate()} ${months[adjustedDate.getMonth()]}`,
-        isUrgent: adjustedDate.getTime() - today.getTime() < 5 * 24 * 60 * 60 * 1000 && adjustedDate.getTime() >= today.getTime(),
-        fullDate: adjustedDate
-      };
-    };
-
     if (view === 'month') {
       return ALL_DEADLINES
         .filter(d => d.isMonthly || d.month === currentMonth)
-        .map(d => processDeadline(d, currentMonth))
+        .map(d => processDeadline(d, currentMonth, currentYear, today))
         .sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
     } else {
-      const yearly = [];
+      const yearly: ProcessedDeadline[] = [];
       for (let m = 0; m < 12; m++) {
         const monthDeadlines = ALL_DEADLINES.filter(d => d.isMonthly || d.month === m);
         monthDeadlines.forEach(d => {
-          yearly.push(processDeadline(d, m));
+          yearly.push(processDeadline(d, m, currentYear, today));
         });
       }
       return yearly.sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
@@ -938,7 +957,7 @@ const CalendarView = () => {
           <h2 className="text-2xl font-bold text-slate-900">Échéancier Fiscal {currentYear}</h2>
           <p className="text-sm text-slate-500">Suivez vos obligations fiscales tout au long de l'année.</p>
         </div>
-        <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+        <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 shrink-0">
           <button 
             onClick={() => setView('month')}
             className={`px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${view === 'month' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
@@ -994,9 +1013,11 @@ const CalendarView = () => {
                     </div>
                   </div>
                   <Dialog>
-                    <DialogTrigger render={<Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold px-4" />}>
-                      Détails
-                    </DialogTrigger>
+                    <DialogTrigger render={
+                      <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-100 font-bold px-4">
+                        Détails
+                      </Button>
+                    } />
                     <DialogContent className="sm:max-w-[450px] rounded-3xl">
                       <DialogHeader>
                         <div className="flex items-center gap-4 mb-2">
@@ -2087,6 +2108,16 @@ const TVACalculatorView = () => {
 };
 
 export default function App() {
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  const urgentDeadlines = ALL_DEADLINES
+    .filter(d => d.isMonthly || d.month === currentMonth)
+    .map(d => processDeadline(d, currentMonth, currentYear, today))
+    .filter(d => d.isUrgent)
+    .sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [publishedArticles, setPublishedArticles] = useState<PublishedArticle[]>([]);
   const [recommendationFilter, setRecommendationFilter] = useState('Tous');
@@ -2095,6 +2126,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Bonjour ! Je suis votre assistant fiscal IA. Comment puis-je vous aider dans vos recherches ou calculs fiscaux aujourd'hui ?" }
   ]);
@@ -2202,7 +2234,13 @@ export default function App() {
             <ScrollArea className="h-full pr-3">
               <SectionTitle>Navigation</SectionTitle>
               <div className="space-y-1">
-                <SidebarItem icon={LayoutDashboard} label="Tableau de bord" id="dashboard" />
+                <SidebarItem 
+                  icon={LayoutDashboard} 
+                  label="Tableau de bord" 
+                  id="dashboard" 
+                  badge={urgentDeadlines.length > 0 ? urgentDeadlines.length : undefined}
+                  color="bg-red-500 text-white"
+                />
                 <SidebarItem icon={Users} label="Communauté" id="community" badge="Live" color="bg-green-500 text-white" />
                 <SidebarItem icon={FileText} label="Articles Publiés" id="articles" badge={publishedArticles.length} color="bg-blue-100 text-blue-700" />
                 <SidebarItem icon={Newspaper} label="Revue de presse" id="news" badge="Nouveau" color="bg-red-500 text-white" />
@@ -2224,7 +2262,13 @@ export default function App() {
                 <SidebarItem icon={Calculator} label="Simulateur IS" id="is" />
                 <SidebarItem icon={Calculator} label="Simulateur IR" id="ir" />
                 <SidebarItem icon={Calculator} label="Calculateur TVA" id="tva" />
-                <SidebarItem icon={Calendar} label="Calendrier fiscal" id="calendar" />
+                <SidebarItem 
+                  icon={Calendar} 
+                  label="Calendrier fiscal" 
+                  id="calendar" 
+                  badge={urgentDeadlines.length > 0 ? urgentDeadlines.length : undefined}
+                  color="bg-red-500 text-white"
+                />
               </div>
 
               {isAdmin && (
@@ -2274,10 +2318,66 @@ export default function App() {
                 <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">IA Active</span>
               </div>
               <Separator orientation="vertical" className="h-6" />
-              <Button variant="ghost" size="icon" className="relative text-slate-500">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full" />
-              </Button>
+              
+              <Dialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+                <DialogTrigger render={
+                  <Button variant="ghost" size="icon" className="relative text-slate-500">
+                    <Bell className="w-5 h-5" />
+                    {urgentDeadlines.length > 0 && (
+                      <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full" />
+                    )}
+                  </Button>
+                } />
+                <DialogContent className="sm:max-w-[400px]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Bell className="w-5 h-5 text-blue-600" />
+                      Alertes Fiscales Critiques
+                    </DialogTitle>
+                    <DialogDescription>
+                      Échéances urgentes nécessitant votre attention immédiate.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-3">
+                    {urgentDeadlines.length > 0 ? urgentDeadlines.map((alert, i) => (
+                      <div 
+                        key={i} 
+                        className="p-4 bg-red-50 rounded-xl border border-red-100 flex items-start gap-3 cursor-pointer hover:bg-red-100 transition-colors"
+                        onClick={() => {
+                          setActiveTab('calendar');
+                          setIsNotificationsOpen(false);
+                        }}
+                      >
+                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-red-900">{alert.title}</p>
+                          <p className="text-xs text-red-700 mt-1">Échéance le {alert.date}</p>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="text-center py-8 space-y-3">
+                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                          <CheckCircle2 className="w-6 h-6 text-green-600" />
+                        </div>
+                        <p className="text-sm text-slate-600 font-medium">Aucune alerte critique en cours.</p>
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => {
+                        setActiveTab('calendar');
+                        setIsNotificationsOpen(false);
+                      }}
+                    >
+                      Voir le calendrier complet
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
                 <DialogTrigger render={
                   <Button 
@@ -2382,10 +2482,13 @@ export default function App() {
                     <h2 className="text-2xl font-bold text-slate-900">Tableau de Bord Fiscal</h2>
                     <p className="text-sm text-slate-500">Aperçu de votre activité et des indicateurs clés.</p>
                   </div>
-                  <DashboardView onNavigate={(tab, filter) => {
-                    setActiveTab(tab);
-                    if (filter) setRecommendationFilter(filter);
-                  }} />
+                  <DashboardView 
+                    onNavigate={(tab, filter) => {
+                      setActiveTab(tab);
+                      if (filter) setRecommendationFilter(filter);
+                    }} 
+                    urgentDeadlines={urgentDeadlines}
+                  />
                 </motion.div>
               ) : activeTab === 'articles' ? (
                 <motion.div
