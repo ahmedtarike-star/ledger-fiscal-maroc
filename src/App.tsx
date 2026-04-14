@@ -53,7 +53,7 @@ import {
   Facebook,
   Link
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from 'react-markdown';
 import { cn } from "@/lib/utils";
 import { 
@@ -84,7 +84,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // --- AI Initialization ---
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // --- Share Component ---
 
@@ -839,7 +840,33 @@ const IRSimulatorView = () => {
   );
 };
 
-const NewsView = ({ news }: { news: any[] }) => {
+const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: () => void, isLoading: boolean }) => {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm text-slate-500 font-medium">Chargement des actualités...</p>
+      </div>
+    );
+  }
+
+  if (news.length === 0) {
+    return (
+      <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <Newspaper className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-slate-900">Aucune actualité trouvée</h3>
+        <p className="text-sm text-slate-500 mb-6">La revue de presse est actuellement vide.</p>
+        <Button 
+          onClick={onRefresh}
+          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+        >
+          <Zap className="w-4 h-4" />
+          Générer les actualités
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6">
       {news.map((item, i) => (
@@ -872,7 +899,33 @@ const NewsView = ({ news }: { news: any[] }) => {
   );
 };
 
-const AINewsView = ({ aiNews }: { aiNews: any[] }) => {
+const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh: () => void, isLoading: boolean }) => {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm text-slate-500 font-medium">Analyse des tendances IA...</p>
+      </div>
+    );
+  }
+
+  if (aiNews.length === 0) {
+    return (
+      <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <Bot className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-slate-900">Veille IA vide</h3>
+        <p className="text-sm text-slate-500 mb-6">Aucune actualité IA n'est disponible pour le moment.</p>
+        <Button 
+          onClick={onRefresh}
+          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+        >
+          <Zap className="w-4 h-4" />
+          Lancer la veille IA
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {aiNews.map((item, i) => (
@@ -1462,16 +1515,14 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
       Utilise les mots-clés : ${keywords}. 
       Le ton doit être : ${tone}. 
       L'article doit inclure un titre accrocheur, une introduction, des sous-titres (H2, H3), et une conclusion. 
-      Optimise le contenu pour le SEO au Maroc pour l'année 2026.`;
+      Optimise le contenu pour le SEO au Maroc pour l'année 2026. Réponds en Markdown.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-      });
-      setGeneratedArticle(response.text || "Désolé, je n'ai pas pu générer l'article.");
+      const result = await aiModel.generateContent(prompt);
+      const text = result.response.text();
+      setGeneratedArticle(text || "Désolé, je n'ai pas pu générer l'article.");
     } catch (error) {
       console.error("Generation error:", error);
-      setGeneratedArticle("Désolé, une erreur est survenue lors de la génération de l'article.");
+      setGeneratedArticle("Désolé, une erreur est survenue lors de la génération de l'article. Vérifiez votre clé API Gemini.");
     } finally {
       setIsGenerating(false);
     }
@@ -1803,11 +1854,8 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
     try {
       const prompt = `En tant qu'expert fiscal marocain, génère 5 recommandations stratégiques pour une entreprise dans le secteur "${analysisData.sector}" avec un chiffre d'affaires de ${analysisData.turnover} DH et ${analysisData.employees} employés pour l'année 2026. Réponds uniquement avec un tableau JSON d'objets ayant les propriétés: title, description, type (Optimisation, Conformité, Économie, Alerte), priority (Critique, Haute, Moyenne, Basse).`;
       
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-      });
-      const text = response.text || "";
+      const result = await aiModel.generateContent(prompt);
+      const text = result.response.text();
       const cleanedText = text.replace(/```json|```/g, '').trim();
       const recs = JSON.parse(cleanedText);
       
@@ -2295,22 +2343,36 @@ export default function App() {
   const [aiNews, setAiNews] = useState<any[]>([]);
   const [isLoadingContent, setIsLoadingContent] = useState(true);
 
+  const fetchContent = async () => {
+    setIsLoadingContent(true);
+    try {
+      const res = await fetch('/api/content');
+      const data = await res.json();
+      setPublishedArticles(data.publishedArticles || []);
+      setNews(data.news || []);
+      setAiNews(data.aiNews || []);
+    } catch (error) {
+      console.error("Failed to fetch content:", error);
+    } finally {
+      setIsLoadingContent(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const res = await fetch('/api/content');
-        const data = await res.json();
-        setPublishedArticles(data.publishedArticles || []);
-        setNews(data.news || []);
-        setAiNews(data.aiNews || []);
-      } catch (error) {
-        console.error("Failed to fetch content:", error);
-      } finally {
-        setIsLoadingContent(false);
-      }
-    };
     fetchContent();
   }, []);
+
+  const handleForceRefresh = async () => {
+    setIsLoadingContent(true);
+    try {
+      await fetch('/api/articles/generate', { method: 'POST' });
+      await fetchContent();
+    } catch (error) {
+      console.error("Failed to force refresh:", error);
+    } finally {
+      setIsLoadingContent(false);
+    }
+  };
 
   const handleDeleteArticle = async (id: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) return;
@@ -2356,11 +2418,8 @@ export default function App() {
     setIsSummarizing(true);
     setSummary('');
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `En tant qu'expert fiscal marocain, résume brièvement (3-4 phrases) l'importance et les points clés du document suivant pour l'année 2026 : "${doc.title}".`,
-      });
-      setSummary(response.text || "Désolé, je n'ai pas pu générer de résumé.");
+      const result = await aiModel.generateContent(`En tant qu'expert fiscal marocain, résume brièvement (3-4 phrases) l'importance et les points clés du document suivant pour l'année 2026 : "${doc.title}".`);
+      setSummary(result.response.text() || "Désolé, je n'ai pas pu générer de résumé.");
     } catch (error) {
       console.error("Summary error:", error);
       setSummary("Désolé, une erreur est survenue lors de la génération du résumé.");
@@ -2384,14 +2443,14 @@ export default function App() {
     setIsChatLoading(true);
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: chatInput,
-        config: {
-          systemInstruction: "Tu es un expert fiscal marocain de Ledger Fiscal Maroc. Tu aides les utilisateurs avec le Code Général des Impôts (CGI), les circulaires de la DGI et la jurisprudence. Réponds de manière professionnelle, précise et cite les articles si possible. Ton ton est sérieux et expert."
-        }
+      const result = await aiModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: chatInput }] }],
+        generationConfig: {
+          maxOutputTokens: 1000,
+        },
       });
-      setMessages(prev => [...prev, { role: 'assistant', content: response.text || "Désolé, je n'ai pas pu générer de réponse." }]);
+      const text = result.response.text();
+      setMessages(prev => [...prev, { role: 'assistant', content: text || "Désolé, je n'ai pas pu générer de réponse." }]);
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'assistant', content: "Erreur de connexion au service IA." }]);
@@ -2863,11 +2922,19 @@ export default function App() {
                   exit={{ opacity: 0, x: -20 }}
                   className="max-w-4xl mx-auto"
                 >
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-slate-900">Revue de Presse Fiscale</h2>
-                    <p className="text-sm text-slate-500">Les dernières actualités juridiques et économiques du Maroc.</p>
+                  <div className="mb-8 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">Revue de Presse Fiscale</h2>
+                      <p className="text-sm text-slate-500">Les dernières actualités juridiques et économiques du Maroc.</p>
+                    </div>
+                    {isAdmin && (
+                      <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
+                        <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
+                        Actualiser
+                      </Button>
+                    )}
                   </div>
-                  <NewsView news={news} />
+                  <NewsView news={news} onRefresh={handleForceRefresh} isLoading={isLoadingContent} />
                 </motion.div>
               ) : activeTab === 'ai-news' ? (
                 <motion.div
@@ -2877,11 +2944,19 @@ export default function App() {
                   exit={{ opacity: 0, x: -20 }}
                   className="max-w-6xl mx-auto"
                 >
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-slate-900">Actualités Intelligence Artificielle</h2>
-                    <p className="text-sm text-slate-500">Comment l'IA révolutionne la gestion fiscale et juridique.</p>
+                  <div className="mb-8 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">Actualités Intelligence Artificielle</h2>
+                      <p className="text-sm text-slate-500">Comment l'IA révolutionne la gestion fiscale et juridique.</p>
+                    </div>
+                    {isAdmin && (
+                      <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
+                        <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
+                        Actualiser
+                      </Button>
+                    )}
                   </div>
-                  <AINewsView aiNews={aiNews} />
+                  <AINewsView aiNews={aiNews} onRefresh={handleForceRefresh} isLoading={isLoadingContent} />
                 </motion.div>
               ) : activeTab === 'seo' && isAdmin ? (
                 <motion.div
