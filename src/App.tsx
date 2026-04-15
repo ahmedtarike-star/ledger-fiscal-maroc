@@ -2782,34 +2782,50 @@ export default function App() {
 
   const handleForceRefresh = async (type: 'news' | 'aiNews' | 'article') => {
     setIsLoadingContent(true);
+    console.log(`Refreshing ${type}...`);
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("Clé API Gemini manquante. Veuillez configurer GEMINI_API_KEY.");
+      }
+
       let prompt = '';
       if (type === 'news') {
         prompt = `En tant qu'expert fiscaliste marocain, génère un titre d'actualité fiscale réaliste et pertinent pour l'année 2026 au Maroc (ex: Loi de Finances, circulaires DGI, décisions de justice). 
         Format JSON: { "title": string, "source": string, "category": "Législation" | "Jurisprudence" | "Économie", "url": string }. 
         La source doit être un média marocain crédible (L'Économiste, Médias24, Le Matin, etc.).
-        Ne réponds QUE le JSON.`;
+        Ne réponds QUE le JSON brut sans balises markdown.`;
       } else if (type === 'aiNews') {
         prompt = `Génère une actualité prospective sur l'impact de l'Intelligence Artificielle dans la pratique fiscale ou comptable au Maroc en 2026. 
         Format JSON: { "title": string, "impact": "Élevé" | "Moyen" | "Critique", "topic": string, "url": string }. 
         Le sujet doit être technique et professionnel (ex: audit automatisé, détection de fraude par IA, conformité en temps réel).
-        Ne réponds QUE le JSON.`;
+        Ne réponds QUE le JSON brut sans balises markdown.`;
       } else {
         prompt = `Rédige un article d'expertise fiscale marocaine de haut niveau (300-400 mots) pour l'année 2026. 
         Le sujet doit porter sur une réforme complexe, une optimisation fiscale légale ou une analyse de jurisprudence récente au Maroc.
         Format JSON: { "title": string, "content": string, "topic": string }. 
         Le contenu doit être structuré en Markdown avec des titres, des listes et des références aux articles du CGI.
         Le ton doit être académique et professionnel.
-        Ne réponds QUE le JSON.`;
+        Ne réponds QUE le JSON brut sans balises markdown.`;
       }
 
       const result = await ai.models.generateContent({
         model: MODEL_NAME,
-        contents: prompt,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: { responseMimeType: "application/json" }
       });
       
-      const content = JSON.parse(result.text || '{}');
+      const rawText = result.text || '{}';
+      console.log("AI Response:", rawText);
+      
+      // Robust JSON parsing
+      let content;
+      try {
+        const cleanedText = rawText.replace(/```json|```/g, '').trim();
+        content = JSON.parse(cleanedText);
+      } catch (e) {
+        console.error("JSON Parse Error:", e, rawText);
+        throw new Error("L'IA a retourné un format invalide. Veuillez réessayer.");
+      }
       
       const body: any = {};
       if (type === 'news') {
@@ -2824,15 +2840,20 @@ export default function App() {
         body.article = content;
       }
 
-      await fetch('/api/content/update', {
+      const updateRes = await fetch('/api/content/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
       
+      if (!updateRes.ok) {
+        throw new Error("Erreur lors de la mise à jour de la base de données.");
+      }
+      
       await fetchContent();
     } catch (error) {
       console.error("Failed to force refresh:", error);
+      alert(error instanceof Error ? error.message : "Une erreur est survenue.");
     } finally {
       setIsLoadingContent(false);
     }
