@@ -51,7 +51,9 @@ import {
   Twitter,
   Linkedin,
   Facebook,
-  Link
+  Link,
+  Mail,
+  Lock as LockIcon,
 } from 'lucide-react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from 'react-markdown';
@@ -2556,6 +2558,22 @@ export default function App() {
             </ScrollArea>
           </div>
 
+          <div className="p-4 bg-blue-600 m-3 rounded-xl text-white space-y-3">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              <span className="text-xs font-bold">Flash Fiscal</span>
+            </div>
+            <p className="text-[10px] opacity-80">Recevez les alertes DGI 2026 par email.</p>
+            <div className="flex gap-1">
+              <input 
+                type="email" 
+                placeholder="Email" 
+                className="w-full text-[10px] px-2 py-1 rounded bg-white/10 border border-white/20 focus:outline-none placeholder:text-white/50"
+              />
+              <button className="bg-white text-blue-600 px-2 py-1 rounded text-[10px] font-bold">OK</button>
+            </div>
+          </div>
+
           {isAdmin && (
             <div className="p-4 border-t border-slate-100">
               <GenerateArticleDialog onPublish={async (article) => {
@@ -2925,15 +2943,22 @@ export default function App() {
                   <div className="mb-8 flex items-center justify-between">
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Revue de Presse Fiscale</h2>
-                      <p className="text-sm text-slate-500">Les dernières actualités juridiques et économiques du Maroc.</p>
+                        <p className="text-sm text-slate-500">Les dernières actualités juridiques et économiques du Maroc.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        {isAdmin ? (
+                          <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
+                            <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
+                            Actualiser (Admin)
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => setIsAdminDialogOpen(true)} className="text-slate-400 hover:text-blue-600">
+                            <LockIcon className="w-4 h-4 mr-2" />
+                            Mode Admin pour actualiser
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    {isAdmin && (
-                      <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
-                        <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
-                        Actualiser
-                      </Button>
-                    )}
-                  </div>
                   <NewsView news={news} onRefresh={handleForceRefresh} isLoading={isLoadingContent} />
                 </motion.div>
               ) : activeTab === 'ai-news' ? (
@@ -2947,15 +2972,22 @@ export default function App() {
                   <div className="mb-8 flex items-center justify-between">
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Actualités Intelligence Artificielle</h2>
-                      <p className="text-sm text-slate-500">Comment l'IA révolutionne la gestion fiscale et juridique.</p>
+                        <p className="text-sm text-slate-500">Comment l'IA révolutionne la gestion fiscale et juridique.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        {isAdmin ? (
+                          <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
+                            <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
+                            Actualiser (Admin)
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => setIsAdminDialogOpen(true)} className="text-slate-400 hover:text-blue-600">
+                            <LockIcon className="w-4 h-4 mr-2" />
+                            Mode Admin pour actualiser
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    {isAdmin && (
-                      <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
-                        <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
-                        Actualiser
-                      </Button>
-                    )}
-                  </div>
                   <AINewsView aiNews={aiNews} onRefresh={handleForceRefresh} isLoading={isLoadingContent} />
                 </motion.div>
               ) : activeTab === 'seo' && isAdmin ? (
@@ -2969,6 +3001,48 @@ export default function App() {
                   <div className="mb-8">
                     <h2 className="text-2xl font-bold text-slate-900">Analyse SEO Fiscale</h2>
                     <p className="text-sm text-slate-500">Performance de vos contenus sur les moteurs de recherche.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <Card className="border-blue-100 bg-blue-50/30">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          Diagnostic API Gemini
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-sm text-slate-600">
+                          Pour vérifier si l'API est bien configurée :
+                        </p>
+                        <ol className="text-sm text-slate-600 list-decimal list-inside space-y-2">
+                          <li>Vérifiez la variable <code className="bg-slate-200 px-1 rounded">GEMINI_API_KEY</code> dans les paramètres.</li>
+                          <li>Cliquez sur le bouton <strong>Actualiser</strong> dans la Revue de Presse.</li>
+                          <li>Si de nouveaux articles apparaissent avec la date d'aujourd'hui, l'API fonctionne.</li>
+                          <li>En cas d'erreur, vérifiez les logs du serveur.</li>
+                        </ol>
+                        <Button 
+                          onClick={handleForceRefresh} 
+                          disabled={isLoadingContent}
+                          className="w-full bg-blue-600"
+                        >
+                          {isLoadingContent ? "Génération en cours..." : "Tester la génération IA"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-slate-200">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-blue-600" />
+                          Conseils SEO 2026
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm text-slate-600">
+                        <p>• Utilisez des titres avec l'année <strong>2026</strong>.</p>
+                        <p>• Citez les articles du <strong>CGI</strong> (Code Général des Impôts).</p>
+                        <p>• Ajoutez des liens vers la <strong>DGI</strong> ou le <strong>Bulletin Officiel</strong>.</p>
+                        <p>• Publiez au moins 2 articles par semaine via l'IA.</p>
+                      </CardContent>
+                    </Card>
                   </div>
                   <SEOView />
                 </motion.div>
