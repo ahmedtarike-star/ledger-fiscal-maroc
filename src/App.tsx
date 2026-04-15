@@ -2782,10 +2782,11 @@ export default function App() {
 
   const handleForceRefresh = async (type: 'news' | 'aiNews' | 'article') => {
     setIsLoadingContent(true);
-    console.log(`Refreshing ${type}...`);
+    console.log(`[AI] Starting refresh for: ${type}`);
     try {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error("Clé API Gemini manquante. Veuillez configurer GEMINI_API_KEY.");
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.length < 10) {
+        throw new Error("Clé API Gemini non configurée ou invalide. Veuillez ajouter GEMINI_API_KEY dans les Secrets.");
       }
 
       let prompt = '';
@@ -2793,38 +2794,40 @@ export default function App() {
         prompt = `En tant qu'expert fiscaliste marocain, génère un titre d'actualité fiscale réaliste et pertinent pour l'année 2026 au Maroc (ex: Loi de Finances, circulaires DGI, décisions de justice). 
         Format JSON: { "title": string, "source": string, "category": "Législation" | "Jurisprudence" | "Économie", "url": string }. 
         La source doit être un média marocain crédible (L'Économiste, Médias24, Le Matin, etc.).
-        Ne réponds QUE le JSON brut sans balises markdown.`;
+        Réponds uniquement avec le JSON.`;
       } else if (type === 'aiNews') {
         prompt = `Génère une actualité prospective sur l'impact de l'Intelligence Artificielle dans la pratique fiscale ou comptable au Maroc en 2026. 
         Format JSON: { "title": string, "impact": "Élevé" | "Moyen" | "Critique", "topic": string, "url": string }. 
         Le sujet doit être technique et professionnel (ex: audit automatisé, détection de fraude par IA, conformité en temps réel).
-        Ne réponds QUE le JSON brut sans balises markdown.`;
+        Réponds uniquement avec le JSON.`;
       } else {
         prompt = `Rédige un article d'expertise fiscale marocaine de haut niveau (300-400 mots) pour l'année 2026. 
         Le sujet doit porter sur une réforme complexe, une optimisation fiscale légale ou une analyse de jurisprudence récente au Maroc.
         Format JSON: { "title": string, "content": string, "topic": string }. 
         Le contenu doit être structuré en Markdown avec des titres, des listes et des références aux articles du CGI.
         Le ton doit être académique et professionnel.
-        Ne réponds QUE le JSON brut sans balises markdown.`;
+        Réponds uniquement avec le JSON.`;
       }
 
       const result = await ai.models.generateContent({
         model: MODEL_NAME,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+        contents: prompt,
+        config: { 
+          responseMimeType: "application/json",
+          temperature: 0.7
+        }
       });
       
       const rawText = result.text || '{}';
-      console.log("AI Response:", rawText);
+      console.log("[AI] Raw Response:", rawText);
       
-      // Robust JSON parsing
       let content;
       try {
         const cleanedText = rawText.replace(/```json|```/g, '').trim();
         content = JSON.parse(cleanedText);
       } catch (e) {
-        console.error("JSON Parse Error:", e, rawText);
-        throw new Error("L'IA a retourné un format invalide. Veuillez réessayer.");
+        console.error("[AI] JSON Parse Error:", e);
+        throw new Error("L'IA a retourné un format de données corrompu. Veuillez réessayer.");
       }
       
       const body: any = {};
@@ -2847,13 +2850,15 @@ export default function App() {
       });
       
       if (!updateRes.ok) {
-        throw new Error("Erreur lors de la mise à jour de la base de données.");
+        const errData = await updateRes.json();
+        throw new Error(errData.error || "Erreur lors de la sauvegarde sur le serveur.");
       }
       
+      console.log(`[AI] ${type} updated successfully.`);
       await fetchContent();
     } catch (error) {
-      console.error("Failed to force refresh:", error);
-      alert(error instanceof Error ? error.message : "Une erreur est survenue.");
+      console.error(`[AI] Refresh failed for ${type}:`, error);
+      alert(`Erreur d'actualisation : ${error instanceof Error ? error.message : "Erreur inconnue"}`);
     } finally {
       setIsLoadingContent(false);
     }
@@ -3776,8 +3781,3 @@ export default function App() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
-    </TooltipProvider>
-  );
-}
