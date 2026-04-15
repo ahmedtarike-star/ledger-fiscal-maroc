@@ -277,6 +277,17 @@ interface Answer {
   likes: number;
 }
 
+interface Expert {
+  id: string;
+  name: string;
+  title: string;
+  specialty: string;
+  location: string;
+  rating: number;
+  reviews: number;
+  image: string;
+}
+
 interface Question {
   id: string;
   author: string;
@@ -291,6 +302,39 @@ interface Question {
 }
 
 // --- Mock Data ---
+
+const EXPERTS: Expert[] = [
+  {
+    id: '1',
+    name: 'Dr. Amine El Fassi',
+    title: 'Expert-Comptable DPLE',
+    specialty: 'Fiscalité des Groupes & IS',
+    location: 'Casablanca',
+    rating: 4.9,
+    reviews: 124,
+    image: 'https://picsum.photos/seed/expert1/200/200'
+  },
+  {
+    id: '2',
+    name: 'Mme. Salma Bennani',
+    title: 'Conseiller Fiscal',
+    specialty: 'TVA & Fiscalité Immobilière',
+    location: 'Rabat',
+    rating: 4.8,
+    reviews: 89,
+    image: 'https://picsum.photos/seed/expert2/200/200'
+  },
+  {
+    id: '3',
+    name: 'M. Karim Tazi',
+    title: 'Avocat Fiscaliste',
+    specialty: 'Contentieux & Contrôle Fiscal',
+    location: 'Tanger',
+    rating: 4.7,
+    reviews: 56,
+    image: 'https://picsum.photos/seed/expert3/200/200'
+  }
+];
 
 const DOCUMENTS: Document[] = [
   {
@@ -779,65 +823,129 @@ const DashboardView = ({ onNavigate, urgentDeadlines }: { onNavigate: (tab: stri
 
 const IRSimulatorView = () => {
   const [salary, setSalary] = useState<string>('');
-  const [result, setResult] = useState<number | null>(null);
+  const [result, setResult] = useState<{
+    brut: number,
+    cnss: number,
+    amo: number,
+    frais: number,
+    netImposable: number,
+    ir: number,
+    net: number
+  } | null>(null);
 
   const calculateIR = () => {
     const s = parseFloat(salary);
     if (isNaN(s)) return;
     
-    // Simple Moroccan IR simulation (simplified brackets)
+    // Moroccan IR simulation 2026 (Simplified)
+    // CNSS: 4.48% capped at 6000 MAD salary (max 268.80)
+    const cnss = Math.min(s, 6000) * 0.0448;
+    // AMO: 2.26% uncapped
+    const amo = s * 0.0226;
+    // Professional expenses: 25% capped at 2500 MAD/month (LF 2026)
+    const frais = Math.min(s * 0.25, 2500);
+    
+    const netImposable = s - cnss - amo - frais;
+    
     let ir = 0;
-    if (s <= 2500) ir = 0;
-    else if (s <= 4166) ir = (s * 0.10) - 250;
-    else if (s <= 5000) ir = (s * 0.20) - 666.67;
-    else if (s <= 6666) ir = (s * 0.30) - 1166.67;
-    else if (s <= 15000) ir = (s * 0.34) - 1433.33;
-    else ir = (s * 0.38) - 2033.33;
+    if (netImposable <= 2500) ir = 0;
+    else if (netImposable <= 4166) ir = (netImposable * 0.10) - 250;
+    else if (netImposable <= 5000) ir = (netImposable * 0.20) - 666.67;
+    else if (netImposable <= 6666) ir = (netImposable * 0.30) - 1166.67;
+    else if (netImposable <= 15000) ir = (netImposable * 0.34) - 1433.33;
+    else ir = (netImposable * 0.38) - 2033.33;
 
-    setResult(Math.max(0, ir));
+    const net = s - cnss - amo - ir;
+
+    setResult({
+      brut: s,
+      cnss,
+      amo,
+      frais,
+      netImposable,
+      ir: Math.max(0, ir),
+      net
+    });
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-slate-900">Simulateur IR Maroc 2026</h2>
-        <p className="text-sm text-slate-500">Calculez votre Impôt sur le Revenu selon les derniers barèmes de la LF 2026.</p>
+        <p className="text-sm text-slate-500">Calculez votre salaire net et votre impôt selon les barèmes de la LF 2026.</p>
       </div>
-      <Card className="border-slate-200 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">Calculateur</CardTitle>
-          <ShareButton title="Simulateur IR Maroc 2026" />
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">Salaire Mensuel Brut (MAD)</label>
-            <Input 
-              type="number" 
-              placeholder="Ex: 10000" 
-              value={salary}
-              onChange={(e) => setSalary(e.target.value)}
-              className="h-12 text-lg"
-            />
-          </div>
-          <Button onClick={calculateIR} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg">
-            Calculer l'Impôt
-          </Button>
-          
-          {result !== null && (
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-2 border-slate-200 shadow-lg h-fit">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg">Paramètres</CardTitle>
+            <ShareButton title="Simulateur IR Maroc 2026" />
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Salaire Mensuel Brut (MAD)</label>
+              <Input 
+                type="number" 
+                placeholder="Ex: 10000" 
+                value={salary}
+                onChange={(e) => setSalary(e.target.value)}
+                className="h-12 text-lg"
+              />
+            </div>
+            <Button onClick={calculateIR} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg">
+              Calculer
+            </Button>
+          </CardContent>
+        </Card>
+
+        <div className="lg:col-span-3">
+          {result ? (
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-100 text-center"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-4"
             >
-              <p className="text-sm font-medium text-blue-600 uppercase tracking-wider">Estimation IR Mensuel</p>
-              <div className="text-4xl font-black text-blue-900 mt-2">
-                {result.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} <span className="text-xl">MAD</span>
-              </div>
-              <p className="text-[10px] text-blue-400 mt-4 italic">Note: Ce calcul est une estimation simplifiée. Consultez un expert pour un calcul précis.</p>
+              <Card className="border-blue-100 bg-blue-50/30">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex justify-between items-center border-b border-blue-100 pb-3">
+                    <span className="text-sm text-slate-600">Salaire Brut</span>
+                    <span className="font-bold text-slate-900">{result.brut.toLocaleString('fr-FR')} MAD</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>CNSS (4.48%)</span>
+                      <span>- {result.cnss.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>AMO (2.26%)</span>
+                      <span>- {result.amo.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Frais Professionnels (25%)</span>
+                      <span>- {result.frais.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t border-blue-100">
+                    <span className="text-sm font-bold text-blue-600">Impôt sur le Revenu (IR)</span>
+                    <span className="text-xl font-black text-red-600">{result.ir.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                  </div>
+                  <div className="mt-6 p-6 bg-blue-600 text-white rounded-2xl text-center shadow-xl shadow-blue-100">
+                    <p className="text-xs font-medium opacity-80 uppercase tracking-widest">Salaire Net à Percevoir</p>
+                    <div className="text-4xl font-black mt-2">
+                      {result.net.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} <span className="text-xl">MAD</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <p className="text-[10px] text-slate-400 italic text-center">Note: Simulation basée sur un célibataire sans enfants. Les déductions pour charges de famille ne sont pas incluses.</p>
             </motion.div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400">
+              <Calculator className="w-12 h-12 mb-4 opacity-20" />
+              <p className="text-sm font-medium">Entrez votre salaire pour voir le détail du calcul</p>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
@@ -852,51 +960,68 @@ const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: () =
     );
   }
 
-  if (news.length === 0) {
-    return (
-      <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-        <Newspaper className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-        <h3 className="text-lg font-bold text-slate-900">Aucune actualité trouvée</h3>
-        <p className="text-sm text-slate-500 mb-6">La revue de presse est actuellement vide.</p>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <Newspaper className="w-5 h-5 text-blue-600" />
+          Revue de Presse Fiscale
+        </h2>
         <Button 
+          variant="outline" 
+          size="sm" 
           onClick={onRefresh}
-          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+          disabled={isLoading}
+          className="h-8 gap-2 border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
         >
-          <Zap className="w-4 h-4" />
-          Générer les actualités
+          <Zap className={`w-4 h-4 ${isLoading ? 'animate-pulse' : ''}`} />
+          {isLoading ? 'Mise à jour...' : 'Actualiser'}
         </Button>
       </div>
-    );
-  }
 
-  return (
-    <div className="grid gap-6">
-      {news.map((item, i) => (
-        <a 
-          key={i} 
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block"
-        >
-          <Card className="border-slate-200 hover:shadow-md transition-all cursor-pointer group">
-            <CardContent className="p-6 flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{item.category}</Badge>
-                  <span className="text-[10px] text-slate-400 font-bold">{item.date}</span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
-                <p className="text-sm text-slate-500">Source: {item.source}</p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
-                <ShareButton title={item.title} url={item.url} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </CardContent>
-          </Card>
-        </a>
-      ))}
+      {news.length === 0 ? (
+        <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+          <Newspaper className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-slate-900">Aucune actualité trouvée</h3>
+          <p className="text-sm text-slate-500 mb-6">La revue de presse est actuellement vide.</p>
+          <Button 
+            onClick={onRefresh}
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+          >
+            <Zap className="w-4 h-4" />
+            Générer les actualités
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {news.map((item, i) => (
+            <a 
+              key={i} 
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <Card className="border-slate-200 hover:shadow-md transition-all cursor-pointer group">
+                <CardContent className="p-6 flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{item.category}</Badge>
+                      <span className="text-[10px] text-slate-400 font-bold">{item.date}</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</h3>
+                    <p className="text-sm text-slate-500">Source: {item.source}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <ExternalLink className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
+                    <ShareButton title={item.title} url={item.url} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -911,56 +1036,73 @@ const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh
     );
   }
 
-  if (aiNews.length === 0) {
-    return (
-      <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-        <Bot className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-        <h3 className="text-lg font-bold text-slate-900">Veille IA vide</h3>
-        <p className="text-sm text-slate-500 mb-6">Aucune actualité IA n'est disponible pour le moment.</p>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <Bot className="w-5 h-5 text-blue-600" />
+          Actualités IA & Fiscalité
+        </h2>
         <Button 
+          variant="outline" 
+          size="sm" 
           onClick={onRefresh}
-          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+          disabled={isLoading}
+          className="h-8 gap-2 border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
         >
-          <Zap className="w-4 h-4" />
-          Lancer la veille IA
+          <Zap className={`w-4 h-4 ${isLoading ? 'animate-pulse' : ''}`} />
+          {isLoading ? 'Mise à jour...' : 'Actualiser'}
         </Button>
       </div>
-    );
-  }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {aiNews.map((item, i) => (
-        <Card key={i} className="border-slate-200 overflow-hidden group">
-          <div className="h-2 bg-blue-600" />
-          <CardHeader>
-            <div className="flex items-center justify-between mb-2">
-              <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-none">{item.topic}</Badge>
-              <div className="flex items-center gap-2">
-                <ShareButton title={item.title} url={item.url} />
-                <span className={`text-[10px] font-bold uppercase ${item.impact === 'Critique' ? 'text-red-500' : 'text-green-500'}`}>
-                  Impact {item.impact}
-                </span>
-              </div>
-            </div>
-            <CardTitle className="text-base leading-tight">{item.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-slate-500">Découvrez comment cette avancée technologique transforme le paysage fiscal marocain en 2026.</p>
-          </CardContent>
-          <CardFooter className="bg-slate-50 border-t p-0">
-            <a href={item.url} target="_blank" rel="noopener noreferrer" className="w-full">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full text-blue-600 hover:text-blue-700 gap-2 h-10 rounded-none"
-              >
-                Lire l'analyse <ChevronRight className="w-4 h-4" />
-              </Button>
-            </a>
-          </CardFooter>
-        </Card>
-      ))}
+      {aiNews.length === 0 ? (
+        <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+          <Bot className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-slate-900">Veille IA vide</h3>
+          <p className="text-sm text-slate-500 mb-6">Aucune actualité IA n'est disponible pour le moment.</p>
+          <Button 
+            onClick={onRefresh}
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+          >
+            <Zap className="w-4 h-4" />
+            Lancer la veille IA
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {aiNews.map((item, i) => (
+            <Card key={i} className="border-slate-200 overflow-hidden group hover:shadow-lg transition-all">
+              <div className="h-2 bg-blue-600" />
+              <CardHeader>
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-none">{item.topic}</Badge>
+                  <div className="flex items-center gap-2">
+                    <ShareButton title={item.title} url={item.url} />
+                    <span className={`text-[10px] font-bold uppercase ${item.impact === 'Critique' ? 'text-red-500' : 'text-green-500'}`}>
+                      Impact {item.impact}
+                    </span>
+                  </div>
+                </div>
+                <CardTitle className="text-base leading-tight group-hover:text-blue-600 transition-colors">{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-slate-500">Découvrez comment cette avancée technologique transforme le paysage fiscal marocain en 2026.</p>
+              </CardContent>
+              <CardFooter className="bg-slate-50 border-t p-0">
+                <a href={item.url} target="_blank" rel="noopener noreferrer" className="w-full">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-blue-600 hover:text-blue-700 gap-2 h-10 rounded-none"
+                  >
+                    Lire l'analyse <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </a>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -968,42 +1110,73 @@ const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh
 const ISSimulatorView = () => {
   const [turnover, setTurnover] = useState<string>('');
   const [profit, setProfit] = useState<string>('');
-  const [result, setResult] = useState<{ is: number, cm: number, final: number } | null>(null);
+  const [regime, setRegime] = useState<'standard' | 'export' | 'industrial'>('standard');
+  const [result, setResult] = useState<{ is: number, cm: number, final: number, rate: number } | null>(null);
 
   const calculateIS = () => {
     const t = parseFloat(turnover) || 0;
     const p = parseFloat(profit) || 0;
     
-    // Moroccan IS 2026 (Simplified for simulation)
-    // Brackets: 0-300k: 10%, 300k-1M: 20%, >1M: 31% (Standard)
-    let isAmount = 0;
-    if (p <= 300000) isAmount = p * 0.10;
-    else if (p <= 1000000) isAmount = (p * 0.20) - 30000;
-    else isAmount = (p * 0.31) - 140000;
+    // Moroccan IS 2026 (Convergence rates)
+    // Standard: 31% target, but for 2026 it's in transition
+    // Simplified brackets for 2026 simulation:
+    let rate = 0.31;
+    let deduction = 140000;
 
-    // Cotisation Minimale (CM) - Standard rate 0.25% of turnover
-    const cmAmount = t * 0.0025;
+    if (p <= 300000) {
+      rate = 0.10;
+      deduction = 0;
+    } else if (p <= 1000000) {
+      rate = 0.20;
+      deduction = 30000;
+    }
+
+    // Adjustments for specific regimes
+    if (regime === 'industrial' || regime === 'export') {
+      if (p > 1000000) {
+        rate = 0.20; // Simplified for simulation
+        deduction = 30000;
+      }
+    }
+
+    const isAmount = (p * rate) - deduction;
+
+    // Cotisation Minimale (CM) - 2026 Standard rate 0.25%
+    const cmRate = 0.0025;
+    const cmAmount = t * cmRate;
 
     setResult({
       is: Math.max(0, isAmount),
       cm: cmAmount,
-      final: Math.max(isAmount, cmAmount)
+      final: Math.max(isAmount, cmAmount),
+      rate: rate * 100
     });
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-slate-900">Simulateur IS Maroc 2026</h2>
-        <p className="text-sm text-slate-500">Calculez votre Impôt sur les Sociétés et la Cotisation Minimale.</p>
+        <p className="text-sm text-slate-500">Convergence vers le taux cible de 31% (LF 2026).</p>
       </div>
-      <Card className="border-slate-200 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">Calculateur</CardTitle>
-          <ShareButton title="Simulateur IS Maroc 2026" />
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-2 border-slate-200 shadow-lg h-fit">
+          <CardHeader>
+            <CardTitle className="text-lg">Données Fiscales</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Régime de la Société</label>
+              <select 
+                className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={regime}
+                onChange={(e) => setRegime(e.target.value as any)}
+              >
+                <option value="standard">Droit Commun (Standard)</option>
+                <option value="industrial">Société Industrielle</option>
+                <option value="export">Société Exportatrice</option>
+              </select>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Chiffre d'Affaires (MAD)</label>
               <Input 
@@ -1022,37 +1195,63 @@ const ISSimulatorView = () => {
                 onChange={(e) => setProfit(e.target.value)}
               />
             </div>
-          </div>
-          <Button onClick={calculateIS} className="w-full h-12 bg-blue-900 hover:bg-black text-white text-lg">
-            Calculer l'IS
-          </Button>
-          
-          {result && (
+            <Button onClick={calculateIS} className="w-full h-12 bg-slate-900 hover:bg-black text-white text-lg">
+              Calculer l'IS
+            </Button>
+          </CardContent>
+        </Card>
+
+        <div className="lg:col-span-3">
+          {result ? (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 space-y-4"
+              className="space-y-4"
             >
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">IS Théorique</p>
-                  <p className="text-lg font-bold text-slate-900">{result.is.toLocaleString('fr-FR')} MAD</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Taux Appliqué</p>
+                  <p className="text-lg font-bold text-blue-600">{result.rate}%</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase">Cotisation Minimale</p>
                   <p className="text-lg font-bold text-slate-900">{result.cm.toLocaleString('fr-FR')} MAD</p>
                 </div>
               </div>
-              <div className="p-6 bg-blue-600 text-white rounded-2xl text-center shadow-xl shadow-blue-100">
-                <p className="text-sm font-medium opacity-80 uppercase tracking-widest">Impôt à Payer (Le plus élevé)</p>
-                <div className="text-4xl font-black mt-2">
-                  {result.final.toLocaleString('fr-FR')} <span className="text-xl">MAD</span>
-                </div>
+              <Card className="border-blue-600 bg-blue-600 text-white overflow-hidden shadow-xl shadow-blue-100">
+                <CardContent className="p-8 text-center relative">
+                  <Sparkles className="absolute top-4 right-4 w-8 h-8 opacity-20" />
+                  <p className="text-sm font-medium opacity-80 uppercase tracking-widest">Impôt Final à Payer</p>
+                  <div className="text-5xl font-black mt-2">
+                    {result.final.toLocaleString('fr-FR')} <span className="text-2xl">MAD</span>
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-white/20 flex justify-around text-xs">
+                    <div>
+                      <p className="opacity-60">IS Théorique</p>
+                      <p className="font-bold">{result.is.toLocaleString('fr-FR')} MAD</p>
+                    </div>
+                    <div>
+                      <p className="opacity-60">Base CM</p>
+                      <p className="font-bold">{result.cm.toLocaleString('fr-FR')} MAD</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl flex gap-3">
+                <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0" />
+                <p className="text-[11px] text-orange-700 leading-relaxed">
+                  <strong>Rappel 2026 :</strong> L'impôt à payer est le montant le plus élevé entre l'IS théorique et la Cotisation Minimale. Les sociétés en déficit sont redevables de la CM.
+                </p>
               </div>
             </motion.div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400">
+              <TrendingUp className="w-12 h-12 mb-4 opacity-20" />
+              <p className="text-sm font-medium">L'analyse fiscale apparaîtra ici après le calcul</p>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
@@ -2266,63 +2465,160 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
 };
 
 const TVACalculatorView = () => {
-  const [ht, setHt] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
   const [rate, setRate] = useState<string>('20');
+  const [mode, setMode] = useState<'ht_to_ttc' | 'ttc_to_ht'>('ht_to_ttc');
   
-  const htVal = parseFloat(ht) || 0;
+  const val = parseFloat(amount) || 0;
   const rateVal = parseFloat(rate) / 100;
-  const tvaVal = htVal * rateVal;
-  const ttcVal = htVal + tvaVal;
+  
+  let htVal = 0;
+  let tvaVal = 0;
+  let ttcVal = 0;
+
+  if (mode === 'ht_to_ttc') {
+    htVal = val;
+    tvaVal = htVal * rateVal;
+    ttcVal = htVal + tvaVal;
+  } else {
+    ttcVal = val;
+    htVal = ttcVal / (1 + rateVal);
+    tvaVal = ttcVal - htVal;
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-slate-900">Calculateur TVA Rapide</h2>
-        <p className="text-sm text-slate-500">Convertissez vos montants HT, TVA et TTC instantanément.</p>
+        <h2 className="text-2xl font-bold text-slate-900">Calculateur TVA Expert</h2>
+        <p className="text-sm text-slate-500">Conversion bidirectionnelle HT/TTC avec les taux en vigueur au Maroc.</p>
       </div>
-      <Card className="border-slate-200 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">Calculateur</CardTitle>
-          <ShareButton title="Calculateur TVA Maroc" />
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+      <Card className="border-slate-200 shadow-xl overflow-hidden">
+        <div className="bg-slate-900 p-1 flex">
+          <button 
+            onClick={() => setMode('ht_to_ttc')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all ${mode === 'ht_to_ttc' ? 'bg-blue-600 text-white rounded-md shadow-lg' : 'text-slate-400 hover:text-white'}`}
+          >
+            HT vers TTC
+          </button>
+          <button 
+            onClick={() => setMode('ttc_to_ht')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all ${mode === 'ttc_to_ht' ? 'bg-blue-600 text-white rounded-md shadow-lg' : 'text-slate-400 hover:text-white'}`}
+          >
+            TTC vers HT
+          </button>
+        </div>
+        <CardContent className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Montant HT (MAD)</label>
-              <Input 
-                type="number" 
-                placeholder="0.00" 
-                value={ht}
-                onChange={(e) => setHt(e.target.value)}
-                className="h-11"
-              />
+              <label className="text-sm font-bold text-slate-700">
+                {mode === 'ht_to_ttc' ? 'Montant Hors Taxe (HT)' : 'Montant Toutes Taxes Comprises (TTC)'}
+              </label>
+              <div className="relative">
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="h-14 text-xl font-bold pl-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">MAD</span>
+              </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Taux TVA (%)</label>
+              <label className="text-sm font-bold text-slate-700">Taux de TVA</label>
               <select 
-                className="w-full h-11 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-14 rounded-md border border-slate-200 bg-white px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
               >
-                <option value="20">20% (Standard)</option>
-                <option value="14">14% (Transport, etc.)</option>
-                <option value="10">10% (Hôtellerie, etc.)</option>
-                <option value="7">7% (Eau, Electricité, etc.)</option>
+                <option value="20">20% — Taux Normal</option>
+                <option value="14">14% — Transport / Électricité</option>
+                <option value="10">10% — Hôtellerie / Restauration</option>
+                <option value="7">7% — Produits de base / Eau</option>
               </select>
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-slate-100">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-500">Montant TVA</span>
-              <span className="text-lg font-bold text-slate-900">{tvaVal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          <div className="space-y-4 pt-6 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant HT</p>
+                <p className="text-xl font-bold text-slate-900">{htVal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} <span className="text-xs">MAD</span></p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant TVA</p>
+                <p className="text-xl font-bold text-blue-600">{tvaVal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} <span className="text-xs">MAD</span></p>
+              </div>
             </div>
-            <div className="flex justify-between items-center p-4 bg-slate-900 text-white rounded-xl">
-              <span className="text-base font-medium opacity-80">Total TTC</span>
-              <span className="text-2xl font-black">{ttcVal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+            <div className="p-8 bg-blue-600 text-white rounded-3xl text-center shadow-2xl shadow-blue-100 relative overflow-hidden">
+              <Sparkles className="absolute -bottom-4 -left-4 w-24 h-24 opacity-10 rotate-12" />
+              <p className="text-xs font-bold opacity-70 uppercase tracking-[0.2em] mb-2">Total TTC Final</p>
+              <div className="text-5xl font-black">
+                {ttcVal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} <span className="text-2xl">MAD</span>
+              </div>
             </div>
           </div>
         </CardContent>
+        <CardFooter className="bg-slate-50 border-t py-4 justify-center">
+          <p className="text-[10px] text-slate-400 font-medium">Calcul conforme aux dispositions du Code Général des Impôts 2026.</p>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
+const DirectoryView = () => {
+  return (
+    <div className="space-y-8 max-w-5xl mx-auto">
+      <div className="text-center space-y-3">
+        <h2 className="text-3xl font-black text-slate-900">Annuaire des Experts</h2>
+        <p className="text-slate-500 max-w-2xl mx-auto">Trouvez les meilleurs professionnels de la fiscalité au Maroc pour vous accompagner dans vos projets.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {EXPERTS.map((expert) => (
+          <Card key={expert.id} className="border-slate-200 overflow-hidden hover:shadow-xl transition-all group">
+            <CardContent className="p-0">
+              <div className="h-32 bg-gradient-to-r from-blue-900 to-slate-900 relative">
+                <div className="absolute -bottom-10 left-6">
+                  <div className="w-20 h-20 rounded-2xl border-4 border-white overflow-hidden shadow-lg">
+                    <img src={expert.image} alt={expert.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                </div>
+              </div>
+              <div className="pt-12 p-6 space-y-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{expert.name}</h3>
+                  <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">{expert.title}</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Briefcase className="w-4 h-4 text-slate-400" />
+                    <span>{expert.specialty}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Globe className="w-4 h-4 text-slate-400" />
+                    <span>{expert.location}, Maroc</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    <span className="text-sm font-bold text-slate-900">{expert.rating}</span>
+                    <span className="text-xs text-slate-400">({expert.reviews} avis)</span>
+                  </div>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Contacter</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="bg-blue-50 border-blue-100 p-8 text-center">
+        <h3 className="text-xl font-bold text-blue-900 mb-2">Vous êtes un professionnel de la fiscalité ?</h3>
+        <p className="text-sm text-blue-700 mb-6">Rejoignez notre réseau et augmentez votre visibilité auprès de milliers d'entreprises.</p>
+        <Button className="bg-blue-900 hover:bg-black text-white px-8">Inscrire mon cabinet</Button>
       </Card>
     </div>
   );
@@ -2537,6 +2833,7 @@ export default function App() {
                 <SidebarItem icon={Calculator} label="Simulateur IS" id="is" />
                 <SidebarItem icon={Calculator} label="Simulateur IR" id="ir" />
                 <SidebarItem icon={Calculator} label="Calculateur TVA" id="tva" />
+                <SidebarItem icon={Users} label="Annuaire Experts" id="directory" badge="Nouveau" color="bg-green-100 text-green-700" />
                 <SidebarItem 
                   icon={Calendar} 
                   label="Calendrier fiscal" 
@@ -3099,6 +3396,16 @@ export default function App() {
                   className="h-full flex items-center justify-center"
                 >
                   <TVACalculatorView />
+                </motion.div>
+              ) : activeTab === 'directory' ? (
+                <motion.div
+                  key="directory"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="max-w-6xl mx-auto"
+                >
+                  <DirectoryView />
                 </motion.div>
               ) : activeTab === 'assistant' ? (
                 <motion.div
