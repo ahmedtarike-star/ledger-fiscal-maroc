@@ -46,27 +46,32 @@ app.get("/api/content", async (req, res) => {
 app.post("/api/content/update", async (req, res) => {
   try {
     const { news, aiNews, article } = req.body;
+    console.log(`[DB] Update request received. Type: ${news ? 'news' : aiNews ? 'aiNews' : 'article'}`);
     const db = await readDB();
     
     if (news) {
       db.news.unshift(news);
       if (db.news.length > 20) db.news = db.news.slice(0, 20);
+      console.log(`[DB] Added news: ${news.title}`);
     }
     
     if (aiNews) {
       db.aiNews.unshift(aiNews);
       if (db.aiNews.length > 20) db.aiNews = db.aiNews.slice(0, 20);
+      console.log(`[DB] Added AI news: ${aiNews.title}`);
     }
     
     if (article) {
       db.publishedArticles.unshift(article);
       if (db.publishedArticles.length > 50) db.publishedArticles = db.publishedArticles.slice(0, 50);
+      console.log(`[DB] Added article: ${article.title}`);
     }
 
     db.lastUpdate = new Date().toISOString();
     await writeDB(db);
     res.json({ message: "Content updated", db });
   } catch (error) {
+    console.error("[DB] Update failed:", error);
     res.status(500).json({ error: "Failed to update content" });
   }
 });
