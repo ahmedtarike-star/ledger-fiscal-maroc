@@ -55,7 +55,7 @@ import {
   Mail,
   Lock as LockIcon,
 } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 import { cn } from "@/lib/utils";
 import { 
@@ -86,8 +86,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // --- AI Initialization ---
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const MODEL_NAME = "gemini-3-flash-preview";
 
 // --- Share Component ---
 
@@ -950,7 +950,7 @@ const IRSimulatorView = () => {
   );
 };
 
-const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: () => void, isLoading: boolean }) => {
+const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: (type: 'news') => void, isLoading: boolean }) => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -970,7 +970,7 @@ const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: () =
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={onRefresh}
+          onClick={() => onRefresh('news')}
           disabled={isLoading}
           className="h-8 gap-2 border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
         >
@@ -985,7 +985,7 @@ const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: () =
           <h3 className="text-lg font-bold text-slate-900">Aucune actualité trouvée</h3>
           <p className="text-sm text-slate-500 mb-6">La revue de presse est actuellement vide.</p>
           <Button 
-            onClick={onRefresh}
+            onClick={() => onRefresh('news')}
             className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
           >
             <Zap className="w-4 h-4" />
@@ -1026,7 +1026,7 @@ const NewsView = ({ news, onRefresh, isLoading }: { news: any[], onRefresh: () =
   );
 };
 
-const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh: () => void, isLoading: boolean }) => {
+const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh: (type: 'aiNews') => void, isLoading: boolean }) => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -1046,7 +1046,7 @@ const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={onRefresh}
+          onClick={() => onRefresh('aiNews')}
           disabled={isLoading}
           className="h-8 gap-2 border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
         >
@@ -1061,7 +1061,7 @@ const AINewsView = ({ aiNews, onRefresh, isLoading }: { aiNews: any[], onRefresh
           <h3 className="text-lg font-bold text-slate-900">Veille IA vide</h3>
           <p className="text-sm text-slate-500 mb-6">Aucune actualité IA n'est disponible pour le moment.</p>
           <Button 
-            onClick={onRefresh}
+            onClick={() => onRefresh('aiNews')}
             className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
           >
             <Zap className="w-4 h-4" />
@@ -1532,12 +1532,16 @@ const PublishedArticlesView = ({
   articles, 
   isAdmin, 
   onDelete, 
-  onUpdate 
+  onUpdate,
+  onRefresh,
+  isLoading
 }: { 
   articles: PublishedArticle[], 
   isAdmin: boolean,
   onDelete: (id: string) => void,
-  onUpdate: (article: PublishedArticle) => void
+  onUpdate: (article: PublishedArticle) => void,
+  onRefresh: (type: 'article') => void,
+  isLoading: boolean
 }) => {
   const [editingArticle, setEditingArticle] = useState<PublishedArticle | null>(null);
 
@@ -1548,6 +1552,18 @@ const PublishedArticlesView = ({
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bibliothèque d'Expertise</h2>
           <p className="text-sm text-slate-500 font-medium">Analyses approfondies et guides pratiques générés par notre IA experte.</p>
         </div>
+        {isAdmin && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => onRefresh('article')} 
+            disabled={isLoading}
+            className="gap-2 bg-white border-blue-200 text-blue-600 hover:bg-blue-50"
+          >
+            <Plus className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Générer Article Expert
+          </Button>
+        )}
       </div>
       
       {articles.length === 0 ? (
@@ -1718,8 +1734,11 @@ const GenerateArticleDialog = ({ onPublish }: { onPublish: (article: PublishedAr
       L'article doit inclure un titre accrocheur, une introduction, des sous-titres (H2, H3), et une conclusion. 
       Optimise le contenu pour le SEO au Maroc pour l'année 2026. Réponds en Markdown.`;
 
-      const result = await aiModel.generateContent(prompt);
-      const text = result.response.text();
+      const result = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: prompt
+      });
+      const text = result.text;
       setGeneratedArticle(text || "Désolé, je n'ai pas pu générer l'article.");
     } catch (error) {
       console.error("Generation error:", error);
@@ -2055,9 +2074,12 @@ const RecommendationsView = ({ filter: externalFilter, setFilter: setExternalFil
     try {
       const prompt = `En tant qu'expert fiscal marocain, génère 5 recommandations stratégiques pour une entreprise dans le secteur "${analysisData.sector}" avec un chiffre d'affaires de ${analysisData.turnover} DH et ${analysisData.employees} employés pour l'année 2026. Réponds uniquement avec un tableau JSON d'objets ayant les propriétés: title, description, type (Optimisation, Conformité, Économie, Alerte), priority (Critique, Haute, Moyenne, Basse).`;
       
-      const result = await aiModel.generateContent(prompt);
-      const text = result.response.text();
-      const cleanedText = text.replace(/```json|```/g, '').trim();
+      const result = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: prompt
+      });
+      const text = result.text;
+      const cleanedText = (text || '').replace(/```json|```/g, '').trim();
       const recs = JSON.parse(cleanedText);
       
       const icons = {
@@ -2758,10 +2780,56 @@ export default function App() {
     fetchContent();
   }, []);
 
-  const handleForceRefresh = async () => {
+  const handleForceRefresh = async (type: 'news' | 'aiNews' | 'article') => {
     setIsLoadingContent(true);
     try {
-      await fetch('/api/articles/generate', { method: 'POST' });
+      let prompt = '';
+      if (type === 'news') {
+        prompt = `En tant qu'expert fiscaliste marocain, génère un titre d'actualité fiscale réaliste et pertinent pour l'année 2026 au Maroc (ex: Loi de Finances, circulaires DGI, décisions de justice). 
+        Format JSON: { "title": string, "source": string, "category": "Législation" | "Jurisprudence" | "Économie", "url": string }. 
+        La source doit être un média marocain crédible (L'Économiste, Médias24, Le Matin, etc.).
+        Ne réponds QUE le JSON.`;
+      } else if (type === 'aiNews') {
+        prompt = `Génère une actualité prospective sur l'impact de l'Intelligence Artificielle dans la pratique fiscale ou comptable au Maroc en 2026. 
+        Format JSON: { "title": string, "impact": "Élevé" | "Moyen" | "Critique", "topic": string, "url": string }. 
+        Le sujet doit être technique et professionnel (ex: audit automatisé, détection de fraude par IA, conformité en temps réel).
+        Ne réponds QUE le JSON.`;
+      } else {
+        prompt = `Rédige un article d'expertise fiscale marocaine de haut niveau (300-400 mots) pour l'année 2026. 
+        Le sujet doit porter sur une réforme complexe, une optimisation fiscale légale ou une analyse de jurisprudence récente au Maroc.
+        Format JSON: { "title": string, "content": string, "topic": string }. 
+        Le contenu doit être structuré en Markdown avec des titres, des listes et des références aux articles du CGI.
+        Le ton doit être académique et professionnel.
+        Ne réponds QUE le JSON.`;
+      }
+
+      const result = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      
+      const content = JSON.parse(result.text || '{}');
+      
+      const body: any = {};
+      if (type === 'news') {
+        content.date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        body.news = content;
+      } else if (type === 'aiNews') {
+        body.aiNews = content;
+      } else {
+        content.id = Date.now().toString();
+        content.date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        content.author = "Expert Ledger IA";
+        body.article = content;
+      }
+
+      await fetch('/api/content/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
       await fetchContent();
     } catch (error) {
       console.error("Failed to force refresh:", error);
@@ -2814,8 +2882,11 @@ export default function App() {
     setIsSummarizing(true);
     setSummary('');
     try {
-      const result = await aiModel.generateContent(`En tant qu'expert fiscal marocain, résume brièvement (3-4 phrases) l'importance et les points clés du document suivant pour l'année 2026 : "${doc.title}".`);
-      setSummary(result.response.text() || "Désolé, je n'ai pas pu générer de résumé.");
+      const result = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: `En tant qu'expert fiscal marocain, résume brièvement (3-4 phrases) l'importance et les points clés du document suivant pour l'année 2026 : "${doc.title}".`
+      });
+      setSummary(result.text || "Désolé, je n'ai pas pu générer de résumé.");
     } catch (error) {
       console.error("Summary error:", error);
       setSummary("Désolé, une erreur est survenue lors de la génération du résumé.");
@@ -2839,13 +2910,14 @@ export default function App() {
     setIsChatLoading(true);
 
     try {
-      const result = await aiModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: chatInput }] }],
-        generationConfig: {
-          maxOutputTokens: 1000,
+      const result = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: chatInput,
+        config: {
+          systemInstruction: "Tu es un assistant fiscal expert au Maroc pour l'année 2026. Réponds de manière précise et professionnelle.",
         },
       });
-      const text = result.response.text();
+      const text = result.text;
       setMessages(prev => [...prev, { role: 'assistant', content: text || "Désolé, je n'ai pas pu générer de réponse." }]);
     } catch (error) {
       console.error(error);
@@ -3207,6 +3279,8 @@ export default function App() {
                     isAdmin={isAdmin}
                     onDelete={handleDeleteArticle}
                     onUpdate={handleUpdateArticle}
+                    onRefresh={handleForceRefresh}
+                    isLoading={isLoadingContent}
                   />
                 </motion.div>
               ) : activeTab === 'recommendations' ? (
@@ -3349,7 +3423,7 @@ export default function App() {
                       </div>
                       <div className="flex gap-2">
                         {isAdmin ? (
-                          <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleForceRefresh('news')} disabled={isLoadingContent} className="gap-2">
                             <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
                             Actualiser (Admin)
                           </Button>
@@ -3361,7 +3435,7 @@ export default function App() {
                         )}
                       </div>
                     </div>
-                  <NewsView news={news} onRefresh={handleForceRefresh} isLoading={isLoadingContent} />
+                  <NewsView news={news} onRefresh={() => handleForceRefresh('news')} isLoading={isLoadingContent} />
                 </motion.div>
               ) : activeTab === 'ai-news' ? (
                 <motion.div
@@ -3378,7 +3452,7 @@ export default function App() {
                       </div>
                       <div className="flex gap-2">
                         {isAdmin ? (
-                          <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isLoadingContent} className="gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleForceRefresh('aiNews')} disabled={isLoadingContent} className="gap-2">
                             <Zap className={cn("w-4 h-4", isLoadingContent && "animate-pulse")} />
                             Actualiser (Admin)
                           </Button>
@@ -3390,7 +3464,7 @@ export default function App() {
                         )}
                       </div>
                     </div>
-                  <AINewsView aiNews={aiNews} onRefresh={handleForceRefresh} isLoading={isLoadingContent} />
+                  <AINewsView aiNews={aiNews} onRefresh={() => handleForceRefresh('aiNews')} isLoading={isLoadingContent} />
                 </motion.div>
               ) : activeTab === 'seo' && isAdmin ? (
                 <motion.div
@@ -3423,7 +3497,7 @@ export default function App() {
                           <li>En cas d'erreur, vérifiez les logs du serveur.</li>
                         </ol>
                         <Button 
-                          onClick={handleForceRefresh} 
+                          onClick={() => handleForceRefresh('news')} 
                           disabled={isLoadingContent}
                           className="w-full bg-blue-600"
                         >
