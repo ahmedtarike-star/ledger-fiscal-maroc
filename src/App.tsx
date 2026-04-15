@@ -2567,7 +2567,97 @@ const TVACalculatorView = () => {
   );
 };
 
+const ContactExpertDialog = ({ expert, open, onOpenChange }: { expert: Expert, open: boolean, onOpenChange: (open: boolean) => void }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSuccess(true);
+      setTimeout(() => {
+        onOpenChange(false);
+        setIsSuccess(false);
+      }, 2000);
+    }, 1500);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-100">
+              <img src={expert.image} alt={expert.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-slate-900">Contacter {expert.name}</p>
+              <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">{expert.title}</p>
+            </div>
+          </DialogTitle>
+          <DialogDescription>
+            Envoyez une demande de consultation ou une question spécifique à cet expert.
+          </DialogDescription>
+        </DialogHeader>
+        
+        {isSuccess ? (
+          <div className="py-12 text-center space-y-4">
+            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto animate-bounce">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Message Envoyé !</h3>
+            <p className="text-sm text-slate-500">L'expert vous répondra dans les plus brefs délais.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase">Nom Complet</label>
+                <Input placeholder="Votre nom" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase">Email</label>
+                <Input type="email" placeholder="votre@email.com" required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase">Sujet de consultation</label>
+              <select className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
+                <option>Optimisation IS 2026</option>
+                <option>Audit de conformité TVA</option>
+                <option>Conseil en investissement</option>
+                <option>Autre demande</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase">Message</label>
+              <textarea 
+                className="w-full min-h-[100px] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Décrivez brièvement votre besoin..."
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 gap-2" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : <Send className="w-4 h-4" />}
+                Envoyer la demande
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const DirectoryView = () => {
+  const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       <div className="text-center space-y-3">
@@ -2607,7 +2697,7 @@ const DirectoryView = () => {
                     <span className="text-sm font-bold text-slate-900">{expert.rating}</span>
                     <span className="text-xs text-slate-400">({expert.reviews} avis)</span>
                   </div>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Contacter</Button>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setSelectedExpert(expert)}>Contacter</Button>
                 </div>
               </div>
             </CardContent>
@@ -2620,6 +2710,14 @@ const DirectoryView = () => {
         <p className="text-sm text-blue-700 mb-6">Rejoignez notre réseau et augmentez votre visibilité auprès de milliers d'entreprises.</p>
         <Button className="bg-blue-900 hover:bg-black text-white px-8">Inscrire mon cabinet</Button>
       </Card>
+
+      {selectedExpert && (
+        <ContactExpertDialog 
+          expert={selectedExpert} 
+          open={!!selectedExpert} 
+          onOpenChange={(open) => !open && setSelectedExpert(null)} 
+        />
+      )}
     </div>
   );
 };
@@ -2855,19 +2953,26 @@ export default function App() {
             </ScrollArea>
           </div>
 
-          <div className="p-4 bg-blue-600 m-3 rounded-xl text-white space-y-3">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4" />
-              <span className="text-xs font-bold">Flash Fiscal</span>
+          <div className="p-4 bg-slate-900 m-3 rounded-2xl text-white space-y-4 shadow-2xl border border-slate-800 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-20 h-20 bg-blue-600/20 rounded-full blur-2xl group-hover:bg-blue-600/30 transition-all" />
+            <div className="flex items-center gap-2 relative z-10">
+              <div className="p-1.5 bg-blue-600 rounded-lg">
+                <Mail className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest">Flash Fiscal</span>
             </div>
-            <p className="text-[10px] opacity-80">Recevez les alertes DGI 2026 par email.</p>
-            <div className="flex gap-1">
+            <p className="text-[10px] text-slate-400 leading-relaxed relative z-10">
+              Recevez les alertes <strong>DGI 2026</strong> et les analyses d'experts directement par email.
+            </p>
+            <div className="space-y-2 relative z-10">
               <input 
                 type="email" 
-                placeholder="Email" 
-                className="w-full text-[10px] px-2 py-1 rounded bg-white/10 border border-white/20 focus:outline-none placeholder:text-white/50"
+                placeholder="votre@email.com" 
+                className="w-full text-[10px] px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-500"
               />
-              <button className="bg-white text-blue-600 px-2 py-1 rounded text-[10px] font-bold">OK</button>
+              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">
+                S'abonner gratuitement
+              </button>
             </div>
           </div>
 
